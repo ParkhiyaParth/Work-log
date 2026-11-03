@@ -1,0 +1,12 @@
+{
+  "name": "Work Log",
+  "short_name": "Work Log",
+  "description": "Track work hours and weekly/monthly payout",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1220",
+  "theme_color": "#6c5ce7",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
