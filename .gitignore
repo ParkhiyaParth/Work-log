@@ -3,3 +3,10 @@ android/
 www/
 assets/
 _site/
+
+# Private assignment files
+assignments/inbox/*
+assignments/my-style/*
+assignments/work/*
+assignments/output/*
+!assignments/*/.gitkeep
