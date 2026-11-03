@@ -28,6 +28,7 @@ jobs:
         run: |
           cp download.html _site/
           gh release download --repo "${{ github.repository }}" --pattern WorkLog.apk --dir _site || echo "no APK yet"
+          [ -f _site/WorkLog.apk ] && (cd _site && zip -q WorkLog-apk.zip WorkLog.apk) || true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
