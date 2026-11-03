@@ -45,6 +45,8 @@ h1{font-size:26px;margin:4px 0 2px}
 .day{display:flex;align-items:center;gap:12px;padding:12px;border-radius:18px;background:var(--card);box-shadow:var(--shadow);margin-top:10px;transition:transform .15s}
 .day:active{transform:scale(.97)}
 .day.today{outline:2px solid var(--pri)}
+.day.sel{outline:3px solid var(--ok);animation:pulse 1.2s ease 2}
+@keyframes pulse{50%{transform:scale(1.04)}}
 .dn{width:48px;text-align:center}
 .dn b{display:block;font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.5px}
 .dn span{font-size:22px;font-weight:700}
@@ -275,10 +277,11 @@ function renderWeek(){
   const today=key(new Date());
   $('days').innerHTML=DAYS.map((n,i)=>{
     const d=addDays(weekStart,i),k=key(d),e=S.entries[k],h=e?e.h:0,max=Math.max(8,S.plan[i]);
-    return `<div class="day ${k===today?'today':''} ${h?'':'empty'}" onclick="openSheet('${k}')">
+    return `<div class="day ${k===today?'today':''} ${k===selDay?'sel':''} ${h?'':'empty'}" id="d-${k}" onclick="openSheet('${k}')">
       <div class="dn"><b>${n}</b><span>${d.getDate()}</span></div>
       <div class="dbar"><div class="track"><i style="width:${Math.min(100,h/max*100)}%"></i></div><small>${S.plan[i]?'plan '+hrs(S.plan[i]):'day off'}</small></div>
       <div class="dh"><b>${h?hrs(h):'+ add'}</b>${h?`<small>${money(earned(e))}</small>`:''}</div></div>`}).join('');
+  if(selDay){const el=$('d-'+selDay);if(el)setTimeout(()=>{const mn=document.querySelector('main');mn.scrollTo({top:mn.scrollTop+el.getBoundingClientRect().top-mn.getBoundingClientRect().top-mn.clientHeight/2+el.offsetHeight/2,behavior:'smooth'})},60);setTimeout(()=>{selDay=null},2500)}
   // end-of-week banner: last completed week not yet dismissed
   const last=addDays(mondayOf(new Date()),-7),lk=key(last),lt=weekTotals(last);
   $('banner').innerHTML=(isThis&&lt.h>0&&!S.dismissed[lk])?
@@ -347,7 +350,7 @@ function renderCal(){
     for(let i=0;i<7;i++){
       const d=addDays(w,i),k=key(d),e=S.entries[k],a=e&&e.h?.25+.65*Math.min(1,e.h/8):0;
       const first=d.getDate()===1?`<i style="font-style:normal;font-size:9px;color:var(--pri)">${fmt(d,{month:'short'})}</i>`:'';
-      h+=`<button class="cd ${d.getMonth()!==m?'out':''} ${k===today?'today':''}" ${a?`style="background:rgba(108,92,231,${a});color:${a>.55?'#fff':'inherit'}"`:''} onclick="openSheet('${k}')">${first}${d.getDate()}${e&&e.h?`<small>${hrs(e.h)}</small>`:''}</button>`;
+      h+=`<button class="cd ${d.getMonth()!==m?'out':''} ${k===today?'today':''}" ${a?`style="background:rgba(108,92,231,${a});color:${a>.55?'#fff':'inherit'}"`:''} onclick="gotoDate('${k}')">${first}${d.getDate()}${e&&e.h?`<small>${hrs(e.h)}</small>`:''}</button>`;
     }
     const wk=key(w),t=weekTotals(w),pd=!!S.paid[wk];
     h+=`<button class="cp ${t.p?'':'none'} ${pd?'paid':''}" onclick="togglePaid('${wk}')"><span>${t.p?money(t.p):'–'}</span><span class="tick">✓</span></button>`;
@@ -376,6 +379,8 @@ function renderHist(){
   $('hist').innerHTML=html||'<div class="card sub">No hours logged yet. Add some on the Week tab.</div>';
   $('hRec').textContent=money(rec);$('hDue').textContent=money(due);
 }
+let selDay=null;
+function gotoDate(k){selDay=k;weekStart=mondayOf(new Date(k+'T00:00'));document.querySelector('.tabs button[data-t=week]').click()}
 function gotoWeek(k){weekStart=new Date(k+'T00:00');document.querySelector('.tabs button[data-t=week]').click()}
 function shiftMonth(n){month=new Date(month.getFullYear(),month.getMonth()+n,1);calStart=mondayOf(month);vib(8);renderMonth();renderCal()}
 
