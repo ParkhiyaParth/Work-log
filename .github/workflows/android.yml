@@ -6,6 +6,7 @@ on:
     paths: [index.html, manifest.json, icon.svg, capacitor.config.json, package.json, .github/workflows/android.yml]
 permissions:
   contents: write
+  actions: write
 jobs:
   apk:
     runs-on: ubuntu-latest
@@ -52,3 +53,7 @@ jobs:
         run: |
           cp android/app/build/outputs/apk/debug/app-debug.apk WorkLog.apk
           gh release create "apk-${{ github.run_number }}" WorkLog.apk --title "Work Log Android build ${{ github.run_number }}" --notes "Download WorkLog.apk on an Android phone and install it." --latest
+      - name: Refresh the website so it serves this APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref "${{ github.ref_name }}"

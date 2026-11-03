@@ -22,6 +22,12 @@ jobs:
         with:
           enablement: true
       - run: mkdir _site && cp index.html manifest.json sw.js icon.svg _site/
+      - name: Add the latest Android APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp download.html _site/
+          gh release download --repo "${{ github.repository }}" --pattern WorkLog.apk --dir _site || echo "no APK yet"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
