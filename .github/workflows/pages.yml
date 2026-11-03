@@ -1,7 +1,7 @@
 name: Deploy Work Log
 on:
   push:
-    branches: [main]
+    branches: [main, ccr-bc1c3867-ybjc2r]
   workflow_dispatch:
 permissions:
   contents: read
