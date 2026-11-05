@@ -5,6 +5,7 @@ import time
 
 from dotenv import load_dotenv
 from telethon import TelegramClient, events
+from telethon.sessions import StringSession
 
 load_dotenv()
 from filters import evaluate, home  # noqa: E402
@@ -13,7 +14,9 @@ from notify import push  # noqa: E402
 db = sqlite3.connect("seen.db")
 db.execute("CREATE TABLE IF NOT EXISTS seen (key TEXT PRIMARY KEY)")
 
-client = TelegramClient("session", int(os.environ["TG_API_ID"]), os.environ["TG_API_HASH"])
+# On a server set TG_SESSION (from make_session.py) so no login code is needed.
+client = TelegramClient(StringSession(os.getenv("TG_SESSION", "")) if os.getenv("TG_SESSION") else "session",
+                        int(os.environ["TG_API_ID"]), os.environ["TG_API_HASH"])
 channel = os.environ.get("TG_CHANNEL", "amazonukjobsalert")
 channel = int(channel) if channel.lstrip("-").isdigit() else channel
 
