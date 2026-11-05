@@ -11,6 +11,9 @@ def test_cases():
     assert not evaluate(post("PR26 6TZ", 20))[0]      # Preston, too far
     assert not evaluate(post("NR3 2BU", 20))[0]       # Norwich
     assert not evaluate(post("HA1 3QH", 20, "❌ No longer available"))[0]
+    nohrs = "📍 Harrow HA1 3QH\n💼 Seasonal | Part-time\n🔗 https://x.co/j\n✅ Still Available"
+    assert evaluate(nohrs)[0]                            # part-time, hours unlisted
+    assert not evaluate(nohrs.replace("Part-time", "Full-time"))[0]
     m, i = evaluate(post("HA1 3QH", 40) + "\n🕐 Hours/Week: 20")  # multi-shift: any shift <= 20
     assert m
     print("ok", evaluate(post("CR0 4XY", 20))[1]["distance_miles"])

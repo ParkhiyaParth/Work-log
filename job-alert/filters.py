@@ -44,6 +44,7 @@ def parse_post(text):
         "postcode": f"{m.group(1)} {m.group(2)}" if m else None,
         "hours": [int(h) for h in HOURS_RE.findall(text)],
         "url": url.group(0).rstrip(").,") if url else None,
+        "part_time": bool(re.search(r"part[\s-]?time", text, re.I)),
         "available": "no longer available" not in text.lower(),
     }
 
@@ -52,10 +53,13 @@ def evaluate(text):
     """Return (match, info dict incl. distance_miles)."""
     info = parse_post(text)
     info["distance_miles"] = None
-    if not info["available"] or not info["hours"] or not info["postcode"]:
+    if not info["available"] or not info["postcode"]:
         return False, info
-    if min(info["hours"]) > int(os.getenv("MAX_HOURS", "20")):
-        return False, info
+    if info["hours"]:
+        if min(info["hours"]) > int(os.getenv("MAX_HOURS", "20")):
+            return False, info
+    elif not (info["part_time"] and os.getenv("ALERT_UNKNOWN_HOURS", "1") == "1"):
+        return False, info  # no hours listed: only alert if marked Part-time
     job, me = geocode(info["postcode"]), home()
     if not job or not me:
         return False, info
