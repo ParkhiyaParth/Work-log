@@ -7,35 +7,44 @@ from dotenv import load_dotenv
 from telethon import TelegramClient, events
 
 load_dotenv()
-from filters import first_url, is_match  # noqa: E402
+from filters import evaluate, home  # noqa: E402
 from notify import push  # noqa: E402
 
 db = sqlite3.connect("seen.db")
 db.execute("CREATE TABLE IF NOT EXISTS seen (key TEXT PRIMARY KEY)")
 
 client = TelegramClient("session", int(os.environ["TG_API_ID"]), os.environ["TG_API_HASH"])
-channel = os.environ["TG_CHANNEL"]
+channel = os.environ.get("TG_CHANNEL", "amazonukjobsalert")
 channel = int(channel) if channel.lstrip("-").isdigit() else channel
 
 
-@client.on(events.NewMessage(chats=channel))
+def process(text):
+    match, info = evaluate(text)
+    if not match:
+        return None
+    # Same job id + same shifts shouldn't re-alert within the same post text
+    key = f"{info['url']}|{info['hours']}|{text[:60]}"
+    if db.execute("SELECT 1 FROM seen WHERE key=?", (key,)).fetchone():
+        return None
+    db.execute("INSERT INTO seen VALUES (?)", (key,))
+    db.commit()
+    return info
+
+
+@client.on(events.NewMessage(chats=channel))  # new posts only; edits ("no longer available") ignored
 async def handler(event):
     t0 = time.time()
     text = event.raw_text or ""
-    print(f"[msg] {text[:80]!r}")
-    if not is_match(text):
+    info = await asyncio.to_thread(process, text)
+    if not info:
         return
-    key = first_url(text) or text[:200]
-    if db.execute("SELECT 1 FROM seen WHERE key=?", (key,)).fetchone():
-        return
-    db.execute("INSERT INTO seen VALUES (?)", (key,))
-    db.commit()
-    # run blocking HTTP off the event loop
-    await asyncio.to_thread(push, "AMAZON JOB MATCH", text[:300], first_url(text))
-    print(f"[ALERT] sent in {time.time() - t0:.2f}s")
+    title = f"JOB {info['distance_miles']:.0f}mi: {min(info['hours'])}h/wk {info['postcode']}"
+    await asyncio.to_thread(push, title, text[:400], info["url"])
+    print(f"[ALERT] {title} sent in {time.time() - t0:.2f}s")
 
 
 async def main():
+    await asyncio.to_thread(home)  # warm the geocode cache
     await client.start()  # first run asks phone number + login code
     print("Listening on", channel)
     await client.run_until_disconnected()
