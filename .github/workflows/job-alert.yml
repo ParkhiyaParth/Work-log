@@ -1,0 +1,39 @@
+name: job-alert listener
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # keeps the chain alive; extra runs just queue
+  workflow_dispatch:
+
+# Only one listener at a time (two logins with one session conflict).
+# A queued run starts the moment the current one ends.
+concurrency:
+  group: job-alert-listener
+  cancel-in-progress: false
+
+jobs:
+  listen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    defaults:
+      run:
+        working-directory: job-alert
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: job-alert/requirements.txt
+      - run: pip install -r requirements.txt
+      - name: Listen for jobs (~5h50m, then the next run takes over)
+        env:
+          TG_API_ID: ${{ secrets.TG_API_ID }}
+          TG_API_HASH: ${{ secrets.TG_API_HASH }}
+          TG_SESSION: ${{ secrets.TG_SESSION }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          TG_CHANNEL: amazonukjobsalert
+          HOME_POSTCODE: HA1 3QH
+          MAX_HOURS: "20"
+          RADIUS_MILES: "40"
+        run: timeout 21000 python -u main.py || [ $? -eq 124 ]
