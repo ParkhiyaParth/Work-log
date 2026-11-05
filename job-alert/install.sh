@@ -9,6 +9,12 @@ python3 -m venv .venv
 .venv/bin/pip install -q --upgrade pip setuptools wheel
 .venv/bin/pip install -q -r requirements.txt
 
+if [ ! -f .env ] && [ -n "${TG_API_ID:-}" ] && [ -n "${TG_API_HASH:-}" ] && [ -n "${NTFY_TOPIC:-}" ]; then
+  cp .env.example .env
+  sed -i "s|^TG_API_ID=.*|TG_API_ID=$TG_API_ID|; s|^TG_API_HASH=.*|TG_API_HASH=$TG_API_HASH|; s|^NTFY_TOPIC=.*|NTFY_TOPIC=$NTFY_TOPIC|" .env
+  chmod 600 .env
+fi
+
 if [ ! -f .env ]; then
   cp .env.example .env
   echo ">> Created .env. Edit it now:  nano $DIR/.env   (set TG_API_ID, TG_API_HASH, NTFY_TOPIC)"
