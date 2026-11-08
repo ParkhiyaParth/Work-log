@@ -10,6 +10,6 @@ and sends a loud push with the apply link.
    *Max priority* and allow it to override Do Not Disturb. (Optional: Pushover for repeat-until-acknowledged.)
 4. `python main.py` (first run asks for your Telegram login code). Keep it running on a VPS/Pi: `nohup python main.py &` or systemd.
 5. (Server) Run `bash install.sh` on an Ubuntu box to set up a systemd service.
-6. Tune `HOME_POSTCODE`, `RADIUS_MILES`, `MAX_HOURS` in `.env`; test with `python test_filters.py`.
+6. Change settings live from your phone: send commands to yourself in Telegram Saved Messages (`help` lists them).
 
 Tip: put the Amazon hiring site as a home-screen shortcut and stay logged in, so tapping the alert is the only step.

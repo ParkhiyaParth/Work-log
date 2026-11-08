@@ -8,6 +8,7 @@ from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 
 load_dotenv()
+import commands  # noqa: E402
 from filters import evaluate, home  # noqa: E402
 from notify import push  # noqa: E402
 
@@ -41,6 +42,14 @@ async def handler(event):  # new posts only; edits ("no longer available") are i
     print(f"[ALERT] {title} sent in {time.time() - t0:.2f}s", flush=True)
 
 
+async def my_commands(event):
+    """Commands typed to yourself (Saved Messages) change the settings live."""
+    reply = await asyncio.to_thread(commands.handle, event.raw_text)
+    if reply:
+        await event.reply(reply)
+        print(f"[CMD] {event.raw_text!r}", flush=True)
+
+
 async def main():
     print("Starting...", flush=True)
     await asyncio.to_thread(home)  # warm the geocode cache
@@ -48,6 +57,7 @@ async def main():
     session = StringSession(os.environ["TG_SESSION"]) if os.getenv("TG_SESSION") else "session"
     client = TelegramClient(session, int(os.environ["TG_API_ID"]), os.environ["TG_API_HASH"])
     client.add_event_handler(handler, events.NewMessage(chats=channel))
+    client.add_event_handler(my_commands, events.NewMessage(chats='me', from_users='me'))
     await client.connect()
     if not await client.is_user_authorized():
         raise SystemExit("Not logged in: TG_SESSION is missing or invalid")

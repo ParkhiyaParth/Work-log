@@ -8,6 +8,7 @@ import requests
 POSTCODE_RE = re.compile(r"\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b")
 HOURS_RE = re.compile(r"Hours/Week:\s*(\d{1,2})", re.I)
 URL_RE = re.compile(r"https?://\S+")
+PAY_RE = re.compile(r"£\s*(\d+(?:\.\d+)?)")
 
 
 def haversine_miles(lat1, lon1, lat2, lon2):
@@ -34,7 +35,8 @@ def geocode(postcode):
 
 
 def home():
-    return geocode(os.getenv("HOME_POSTCODE", "HA1 3QH"))
+    import settings
+    return geocode(settings.load()["postcode"])
 
 
 def parse_post(text):
@@ -51,17 +53,25 @@ def parse_post(text):
 
 def evaluate(text):
     """Return (match, info dict incl. distance_miles)."""
+    import settings
+    cfg = settings.load()
     info = parse_post(text)
     info["distance_miles"] = None
+    if cfg["paused"]:
+        return False, info
     if not info["available"] or not info["postcode"]:
         return False, info
     if info["hours"]:
-        if min(info["hours"]) > int(os.getenv("MAX_HOURS", "20")):
+        # any shift inside [min_hours, max_hours] qualifies
+        if not any(cfg["min_hours"] <= h <= cfg["max_hours"] for h in info["hours"]):
             return False, info
-    elif not (info["part_time"] and os.getenv("ALERT_UNKNOWN_HOURS", "1") == "1"):
+    elif not (info["part_time"] and cfg["alert_unknown_hours"]):
         return False, info  # no hours listed: only alert if marked Part-time
+    pay = PAY_RE.search(text)
+    if pay and float(pay.group(1)) < cfg["min_pay"]:
+        return False, info
     job, me = geocode(info["postcode"]), home()
     if not job or not me:
         return False, info
     info["distance_miles"] = haversine_miles(*me, *job)
-    return info["distance_miles"] <= float(os.getenv("RADIUS_MILES", "40")), info
+    return info["distance_miles"] <= cfg["radius_miles"], info
