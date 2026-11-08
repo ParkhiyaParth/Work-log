@@ -48,8 +48,23 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 UNIT
+sudo tee /etc/systemd/system/job-alert-web.service >/dev/null <<UNIT
+[Unit]
+Description=Job alert web app
+After=network-online.target
+
+[Service]
+User=$USER
+WorkingDirectory=$DIR
+ExecStart=$DIR/.venv/bin/python -u web.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+UNIT
 sudo systemctl daemon-reload
-sudo systemctl enable --now job-alert
+sudo systemctl enable --now job-alert job-alert-web
 sleep 3
 sudo systemctl --no-pager status job-alert | head -n 12
 echo ">> Live logs:  journalctl -u job-alert -f"

@@ -2,10 +2,11 @@ import os
 import requests
 
 
-def push(title, body, url=None):
+def push(title, body, url=None, topic=None):
     """Send loud push via ntfy (urgent) and/or Pushover (emergency)."""
+    topic_given = topic is not None
     sent = False
-    topic = os.getenv("NTFY_TOPIC")
+    topic = topic or os.getenv("NTFY_TOPIC")
     if topic:
         headers = {"Title": title, "Priority": "5", "Tags": "rotating_light,briefcase"}
         if url:
@@ -15,7 +16,7 @@ def push(title, body, url=None):
                       data=body.encode("utf-8"), headers=headers, timeout=10)
         sent = True
     user, token = os.getenv("PUSHOVER_USER"), os.getenv("PUSHOVER_TOKEN")
-    if user and token:
+    if user and token and not topic_given:
         data = {"user": user, "token": token, "title": title, "message": body,
                 "priority": 2, "retry": 30, "expire": 600}  # repeats until acknowledged
         if url:

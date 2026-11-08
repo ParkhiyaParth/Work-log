@@ -48,30 +48,34 @@ def parse_post(text):
         "url": url.group(0).rstrip(").,") if url else None,
         "part_time": bool(re.search(r"part[\s-]?time", text, re.I)),
         "available": "no longer available" not in text.lower(),
+        "text": text,
     }
 
 
-def evaluate(text):
-    """Return (match, info dict incl. distance_miles)."""
-    import settings
-    cfg = settings.load()
-    info = parse_post(text)
-    info["distance_miles"] = None
-    if cfg["paused"]:
-        return False, info
-    if not info["available"] or not info["postcode"]:
-        return False, info
+def match(info, cfg, me):
+    """Does a parsed post fit one user's settings? me=(lat, lon). Returns (bool, miles)."""
+    if cfg["paused"] or not info["available"] or not info["postcode"] or not me:
+        return False, None
     if info["hours"]:
-        # any shift inside [min_hours, max_hours] qualifies
         if not any(cfg["min_hours"] <= h <= cfg["max_hours"] for h in info["hours"]):
-            return False, info
+            return False, None
     elif not (info["part_time"] and cfg["alert_unknown_hours"]):
-        return False, info  # no hours listed: only alert if marked Part-time
-    pay = PAY_RE.search(text)
+        return False, None  # no hours listed: only alert if marked Part-time
+    pay = PAY_RE.search(info.get("text", ""))
     if pay and float(pay.group(1)) < cfg["min_pay"]:
-        return False, info
-    job, me = geocode(info["postcode"]), home()
-    if not job or not me:
-        return False, info
-    info["distance_miles"] = haversine_miles(*me, *job)
-    return info["distance_miles"] <= cfg["radius_miles"], info
+        return False, None
+    job = geocode(info["postcode"])
+    if not job:
+        return False, None
+    miles = haversine_miles(*me, *job)
+    return miles <= cfg["radius_miles"], miles
+
+
+def evaluate(text):
+    """Single-user mode (settings.json). Return (match, info dict incl. distance_miles)."""
+    import settings
+    info = parse_post(text)
+    info["text"] = text
+    ok, miles = match(info, settings.load(), home())
+    info["distance_miles"] = miles
+    return ok, info

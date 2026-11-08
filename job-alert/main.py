@@ -9,7 +9,9 @@ from telethon.sessions import StringSession
 
 load_dotenv()
 import commands  # noqa: E402
-from filters import evaluate, home  # noqa: E402
+import users  # noqa: E402
+from concurrent.futures import ThreadPoolExecutor  # noqa: E402
+from filters import evaluate, home, match, parse_post  # noqa: E402
 from notify import push  # noqa: E402
 
 db = sqlite3.connect("seen.db")
@@ -31,15 +33,38 @@ def process(text):
     return info
 
 
+POOL = ThreadPoolExecutor(max_workers=16)
+
+
+def alert_everyone(text):
+    """Parse the post once, then alert every registered user whose settings match."""
+    info = parse_post(text)
+    if not info["available"] or not info["postcode"]:
+        return 0
+    key = f"{info['url']}|{info['hours']}|{text[:60]}"
+    if db.execute("SELECT 1 FROM seen WHERE key=?", (key,)).fetchone():
+        return 0
+    db.execute("INSERT INTO seen VALUES (?)", (key,))
+    db.commit()
+    sent = []
+    for u in users.all_active():
+        ok, miles = match(info, {**u, "alert_unknown_hours": bool(u["alert_unknown_hours"]), "paused": False}, (u["lat"], u["lon"]))
+        if ok:
+            title = f"JOB {miles:.0f}mi: {min(info['hours']) if info['hours'] else '?'}h/wk {info['postcode']}"
+            sent.append(POOL.submit(push, title, text[:400], info["url"], u["topic"]))
+    for f in sent:
+        try:
+            f.result(timeout=20)
+        except Exception as e:  # one bad push must not block others
+            print("[push error]", e, flush=True)
+    return len(sent)
+
+
 async def handler(event):  # new posts only; edits ("no longer available") are ignored
     t0 = time.time()
-    text = event.raw_text or ""
-    info = await asyncio.to_thread(process, text)
-    if not info:
-        return
-    title = f"JOB {info['distance_miles']:.0f}mi: {min(info['hours'])}h/wk {info['postcode']}"
-    await asyncio.to_thread(push, title, text[:400], info["url"])
-    print(f"[ALERT] {title} sent in {time.time() - t0:.2f}s", flush=True)
+    n = await asyncio.to_thread(alert_everyone, event.raw_text or "")
+    if n:
+        print(f"[ALERT] {n} user(s) alerted in {time.time() - t0:.2f}s", flush=True)
 
 
 async def my_commands(event):
