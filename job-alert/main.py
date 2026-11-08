@@ -14,9 +14,6 @@ from notify import push  # noqa: E402
 db = sqlite3.connect("seen.db")
 db.execute("CREATE TABLE IF NOT EXISTS seen (key TEXT PRIMARY KEY)")
 
-# On a server set TG_SESSION (from make_session.py) so no login code is needed.
-client = TelegramClient(StringSession(os.getenv("TG_SESSION", "")) if os.getenv("TG_SESSION") else "session",
-                        int(os.environ["TG_API_ID"]), os.environ["TG_API_HASH"])
 channel = os.environ.get("TG_CHANNEL", "amazonukjobsalert")
 channel = int(channel) if channel.lstrip("-").isdigit() else channel
 
@@ -25,7 +22,6 @@ def process(text):
     match, info = evaluate(text)
     if not match:
         return None
-    # Same job id + same shifts shouldn't re-alert within the same post text
     key = f"{info['url']}|{info['hours']}|{text[:60]}"
     if db.execute("SELECT 1 FROM seen WHERE key=?", (key,)).fetchone():
         return None
@@ -34,8 +30,7 @@ def process(text):
     return info
 
 
-@client.on(events.NewMessage(chats=channel))  # new posts only; edits ("no longer available") ignored
-async def handler(event):
+async def handler(event):  # new posts only; edits ("no longer available") are ignored
     t0 = time.time()
     text = event.raw_text or ""
     info = await asyncio.to_thread(process, text)
@@ -43,13 +38,21 @@ async def handler(event):
         return
     title = f"JOB {info['distance_miles']:.0f}mi: {min(info['hours'])}h/wk {info['postcode']}"
     await asyncio.to_thread(push, title, text[:400], info["url"])
-    print(f"[ALERT] {title} sent in {time.time() - t0:.2f}s")
+    print(f"[ALERT] {title} sent in {time.time() - t0:.2f}s", flush=True)
 
 
 async def main():
+    print("Starting...", flush=True)
     await asyncio.to_thread(home)  # warm the geocode cache
-    await client.start()  # first run asks phone number + login code
-    print("Listening on", channel)
+    # Client MUST be created inside the running loop (otherwise it hangs after connecting).
+    session = StringSession(os.environ["TG_SESSION"]) if os.getenv("TG_SESSION") else "session"
+    client = TelegramClient(session, int(os.environ["TG_API_ID"]), os.environ["TG_API_HASH"])
+    client.add_event_handler(handler, events.NewMessage(chats=channel))
+    await client.connect()
+    if not await client.is_user_authorized():
+        raise SystemExit("Not logged in: TG_SESSION is missing or invalid")
+    me = await client.get_me()
+    print(f"Logged in as {me.first_name}. Listening on {channel}", flush=True)
     await client.run_until_disconnected()
 
 
