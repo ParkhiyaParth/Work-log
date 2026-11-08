@@ -4,7 +4,11 @@ set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
 
-sudo apt-get update -y && sudo apt-get install -y python3 python3-venv python3-pip git
+if command -v apt-get >/dev/null; then
+  sudo apt-get update -y && sudo apt-get install -y python3 python3-venv python3-pip git
+else
+  sudo dnf install -y python3 python3-pip git
+fi
 python3 -m venv .venv
 .venv/bin/pip install -q --upgrade pip setuptools wheel
 .venv/bin/pip install -q -r requirements.txt
