@@ -15,6 +15,7 @@ def _defaults():
         "radius_miles": float(os.getenv("RADIUS_MILES", "40")),
         "min_pay": float(os.getenv("MIN_PAY", "0")),
         "alert_unknown_hours": os.getenv("ALERT_UNKNOWN_HOURS", "1") == "1",
+        "anywhere": os.getenv("ANYWHERE", "0") == "1",
         "paused": False,
     }
 

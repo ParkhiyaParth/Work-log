@@ -39,7 +39,7 @@ POOL = ThreadPoolExecutor(max_workers=16)
 def alert_everyone(text):
     """Parse the post once, then alert every registered user whose settings match."""
     info = parse_post(text)
-    if not info["available"] or not info["postcode"]:
+    if not info["available"]:
         return 0
     key = f"{info['url']}|{info['hours']}|{text[:60]}"
     if db.execute("SELECT 1 FROM seen WHERE key=?", (key,)).fetchone():
@@ -48,10 +48,20 @@ def alert_everyone(text):
     db.commit()
     sent = []
     for u in users.all_active():
-        ok, miles = match(info, {**u, "alert_unknown_hours": bool(u["alert_unknown_hours"]), "paused": False}, (u["lat"], u["lon"]))
+        ok, miles = match(info, {**u, "alert_unknown_hours": bool(u["alert_unknown_hours"]), "anywhere": bool(u["anywhere"]), "paused": False}, (u["lat"], u["lon"]))
         if ok:
-            title = f"JOB {miles:.0f}mi: {min(info['hours']) if info['hours'] else '?'}h/wk {info['postcode']}"
+            where = f"{miles:.0f}mi" if miles is not None else "UK"
+            title = f"JOB {where}: {min(info['hours']) if info['hours'] else '?'}h/wk {info['postcode'] or ''}"
             sent.append(POOL.submit(push, title, text[:400], info["url"], u["topic"]))
+    # The owner (settings.json via Saved Messages commands) keeps alerting NTFY_TOPIC.
+    if os.getenv("NTFY_TOPIC"):
+        import settings
+        cfg = settings.load()
+        ok, miles = match(info, cfg, home())
+        if ok:
+            where = f"{miles:.0f}mi" if miles is not None else "UK"
+            title = f"JOB {where}: {min(info['hours']) if info['hours'] else '?'}h/wk {info['postcode'] or ''}".strip()
+            sent.append(POOL.submit(push, title, text[:400], info["url"]))
     for f in sent:
         try:
             f.result(timeout=20)

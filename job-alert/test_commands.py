@@ -23,3 +23,14 @@ def run():
     assert "❌" in commands.handle("radius abc")
     print("commands ok")
 run()
+
+def anywhere_test():
+    from filters import evaluate
+    p = lambda pc: f"📍 X {pc}\n💼 Part-time\n🕐 Hours/Week: 20\n🔗 https://x.co/j\n✅ Still Available"
+    commands.handle("radius 5"); assert not evaluate(p("PR26 6TZ"))[0]
+    assert "ON" in commands.handle("anywhere on"); assert evaluate(p("PR26 6TZ"))[0]
+    assert evaluate("💼 Part-time\n🕐 Hours/Week: 20\n✅ Still Available")[0]      # no postcode still alerts
+    assert not evaluate(p("PR26 6TZ").replace("20", "30"))[0]                     # >20h still blocked
+    commands.handle("anywhere off"); assert not evaluate(p("PR26 6TZ"))[0]
+    print("anywhere ok")
+anywhere_test()

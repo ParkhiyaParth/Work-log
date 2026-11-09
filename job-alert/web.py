@@ -28,7 +28,7 @@ def page(body):
 
 
 def form_body(u=None, err="", action="/signup", button="Start alerts", heading=True):
-    u = u or {"postcode": "", "radius_miles": 30, "min_hours": 0, "max_hours": 20, "min_pay": 0, "alert_unknown_hours": 1}
+    u = u or {"postcode": "", "radius_miles": 30, "min_hours": 0, "max_hours": 20, "min_pay": 0, "alert_unknown_hours": 1, "anywhere": 0}
     g = lambda k: html.escape(str(u[k]))
     return (f"""{'<h1>🔔 Warehouse job alerts</h1><p>Tell us what you want. We will send a loud alert the moment a matching job appears.</p>' if heading else ''}
 {f'<p class=err>{html.escape(err)}</p>' if err else ''}
@@ -38,6 +38,8 @@ def form_body(u=None, err="", action="/signup", button="Start alerts", heading=T
 <div class=row><div><label>Min hours/week</label><input name=min_hours type=number min=0 max=60 value="{g('min_hours')}"></div>
 <div><label>Max hours/week</label><input name=max_hours type=number min=0 max=60 value="{g('max_hours')}"></div></div>
 <label>Minimum pay (£/hour, optional)</label><input name=min_pay type=number step=0.1 min=0 value="{g('min_pay')}">
+<label><input type=checkbox name=anywhere style="width:auto" {'checked' if u.get('anywhere') else ''}>
+ Alert me for jobs <b>anywhere in the UK</b> (ignore distance)</label>
 <label><input type=checkbox name=alert_unknown_hours style="width:auto" {'checked' if u['alert_unknown_hours'] else ''}>
  Also alert part-time jobs that don't list hours</label>
 <button>{button}</button></form>""")

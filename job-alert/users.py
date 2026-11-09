@@ -15,6 +15,10 @@ def conn():
         secret TEXT PRIMARY KEY, topic TEXT UNIQUE, postcode TEXT, lat REAL, lon REAL,
         radius_miles REAL, min_hours INTEGER, max_hours INTEGER, min_pay REAL,
         alert_unknown_hours INTEGER, paused INTEGER DEFAULT 0, created INTEGER DEFAULT (strftime('%s','now')))""")
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN anywhere INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # column already exists
     return c
 
 
@@ -37,15 +41,16 @@ def clean(form):
     if not (1 <= radius <= 200 and 0 <= mn <= mx <= 60 and 0 <= pay <= 100):
         raise ValueError("Those numbers look out of range")
     return dict(postcode=pc, lat=ll[0], lon=ll[1], radius_miles=radius, min_hours=mn, max_hours=mx,
-                min_pay=pay, alert_unknown_hours=1 if form.get("alert_unknown_hours") else 0)
+                min_pay=pay, alert_unknown_hours=1 if form.get("alert_unknown_hours") else 0,
+                anywhere=1 if form.get("anywhere") else 0)
 
 
 def create(form):
     d = clean(form)
     d["secret"], d["topic"] = secrets.token_urlsafe(16), "amzjob-" + secrets.token_hex(8)
     with conn() as c:
-        c.execute("INSERT INTO users (secret,topic,postcode,lat,lon,radius_miles,min_hours,max_hours,min_pay,alert_unknown_hours)"
-                  " VALUES (:secret,:topic,:postcode,:lat,:lon,:radius_miles,:min_hours,:max_hours,:min_pay,:alert_unknown_hours)", d)
+        c.execute("INSERT INTO users (secret,topic,postcode,lat,lon,radius_miles,min_hours,max_hours,min_pay,alert_unknown_hours,anywhere)"
+                  " VALUES (:secret,:topic,:postcode,:lat,:lon,:radius_miles,:min_hours,:max_hours,:min_pay,:alert_unknown_hours,:anywhere)", d)
     return d["secret"]
 
 
@@ -60,7 +65,7 @@ def update(secret, form):
     d["secret"] = secret
     with conn() as c:
         c.execute("UPDATE users SET postcode=:postcode,lat=:lat,lon=:lon,radius_miles=:radius_miles,min_hours=:min_hours,"
-                  "max_hours=:max_hours,min_pay=:min_pay,alert_unknown_hours=:alert_unknown_hours WHERE secret=:secret", d)
+                  "max_hours=:max_hours,min_pay=:min_pay,alert_unknown_hours=:alert_unknown_hours,anywhere=:anywhere WHERE secret=:secret", d)
 
 
 def set_paused(secret, paused):

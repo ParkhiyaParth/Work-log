@@ -54,7 +54,10 @@ def parse_post(text):
 
 def match(info, cfg, me):
     """Does a parsed post fit one user's settings? me=(lat, lon). Returns (bool, miles)."""
-    if cfg["paused"] or not info["available"] or not info["postcode"] or not me:
+    anywhere = bool(cfg.get("anywhere"))
+    if cfg["paused"] or not info["available"]:
+        return False, None
+    if not anywhere and (not info["postcode"] or not me):
         return False, None
     if info["hours"]:
         if not any(cfg["min_hours"] <= h <= cfg["max_hours"] for h in info["hours"]):
@@ -64,10 +67,12 @@ def match(info, cfg, me):
     pay = PAY_RE.search(info.get("text", ""))
     if pay and float(pay.group(1)) < cfg["min_pay"]:
         return False, None
-    job = geocode(info["postcode"])
-    if not job:
+    job = geocode(info["postcode"]) if info["postcode"] else None
+    miles = haversine_miles(*me, *job) if (job and me) else None
+    if anywhere:
+        return True, miles  # any location in the channel
+    if miles is None:
         return False, None
-    miles = haversine_miles(*me, *job)
     return miles <= cfg["radius_miles"], miles
 
 
