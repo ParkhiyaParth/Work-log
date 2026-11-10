@@ -25,8 +25,8 @@ def status_text(s):
             f"Alerts: {'PAUSED' if s['paused'] else 'on'}")
 
 
-def handle(text):
-    """Return a reply string if text is a command, else None."""
+def handle_one(text):
+    """Return a reply string if one line is a command, else None."""
     t = (text or "").strip()
     m = re.match(r"^/?(postcode|radius|hours|minhours|pay|unknown|anywhere|pause|resume|status|help)\b\s*(.*)$", t, re.I)
     if not m:
@@ -62,3 +62,15 @@ def handle(text):
         return "✅ Updated.\n" + status_text(settings.save({key: val}))
     except ValueError:
         return f"❌ Couldn't read that. Example: {cmd} 20"
+
+
+def handle(text):
+    """Accept one or several commands (one per line). Reply once with the final status."""
+    lines = [l for l in (text or "").splitlines() if l.strip()]
+    replies = [r for r in (handle_one(l) for l in lines) if r is not None]
+    if not replies:
+        return None
+    if len(replies) == 1:
+        return replies[0]
+    errors = [r for r in replies if r.startswith("❌")]
+    return "\n".join(errors + [replies[-1]])

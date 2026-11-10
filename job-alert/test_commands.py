@@ -34,3 +34,11 @@ def anywhere_test():
     commands.handle("anywhere off"); assert not evaluate(p("PR26 6TZ"))[0]
     print("anywhere ok")
 anywhere_test()
+
+def multiline_test():
+    r = commands.handle("anywhere on\nhours 20\nminhours 0\nstatus")
+    assert "Anywhere in UK: ON" in r and "Hours/week: 0-20" in r, r
+    assert "❌" in commands.handle("radius abc\nstatus")
+    assert commands.handle("hello\nworld") is None
+    print("multiline ok")
+multiline_test()
