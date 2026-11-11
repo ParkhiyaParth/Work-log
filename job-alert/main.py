@@ -1,6 +1,7 @@
 import asyncio
 import os
 import sqlite3
+import threading
 import time
 
 from dotenv import load_dotenv
@@ -14,23 +15,25 @@ from concurrent.futures import ThreadPoolExecutor  # noqa: E402
 from filters import evaluate, home, match, parse_post  # noqa: E402
 from notify import push  # noqa: E402
 
-db = sqlite3.connect("seen.db")
-db.execute("CREATE TABLE IF NOT EXISTS seen (key TEXT PRIMARY KEY)")
+_seen_lock = threading.Lock()
+
+
+def first_time(key):
+    """True the first time a post key is seen. Opens a fresh connection per call (thread-safe)."""
+    with _seen_lock:
+        c = sqlite3.connect(os.getenv("SEEN_DB", "seen.db"))
+        try:
+            c.execute("CREATE TABLE IF NOT EXISTS seen (key TEXT PRIMARY KEY)")
+            if c.execute("SELECT 1 FROM seen WHERE key=?", (key,)).fetchone():
+                return False
+            c.execute("INSERT INTO seen VALUES (?)", (key,))
+            c.commit()
+            return True
+        finally:
+            c.close()
 
 channel = os.environ.get("TG_CHANNEL", "amazonukjobsalert")
 channel = int(channel) if channel.lstrip("-").isdigit() else channel
-
-
-def process(text):
-    match, info = evaluate(text)
-    if not match:
-        return None
-    key = f"{info['url']}|{info['hours']}|{text[:60]}"
-    if db.execute("SELECT 1 FROM seen WHERE key=?", (key,)).fetchone():
-        return None
-    db.execute("INSERT INTO seen VALUES (?)", (key,))
-    db.commit()
-    return info
 
 
 POOL = ThreadPoolExecutor(max_workers=16)
@@ -47,10 +50,8 @@ def alert_everyone(text):
     if not info["available"]:
         return 0
     key = f"{info['url']}|{info['hours']}|{text[:60]}"
-    if db.execute("SELECT 1 FROM seen WHERE key=?", (key,)).fetchone():
+    if not first_time(key):
         return 0
-    db.execute("INSERT INTO seen VALUES (?)", (key,))
-    db.commit()
     sent = []
     for u in users.all_active():
         ok, miles = match(info, {**u, "alert_unknown_hours": bool(u["alert_unknown_hours"]), "anywhere": bool(u["anywhere"]), "paused": False}, (u["lat"], u["lon"]))

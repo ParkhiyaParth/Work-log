@@ -59,3 +59,19 @@ def testmode_test():
     assert sent and sent[0].startswith("TEST:"), sent
     print("testmode ok")
 testmode_test()
+
+def thread_test():
+    """Regression: alert_everyone must work when called from another thread (as the real handler does)."""
+    import asyncio, main
+    from concurrent.futures import ThreadPoolExecutor
+    main.POOL = ThreadPoolExecutor(4)
+    os.environ["SEEN_DB"] = tempfile.mktemp(suffix=".db")
+    settings.save({"anywhere": True, "alert_all_until": 0})
+    sent = []; main.push = lambda *a, **k: sent.append(a[0])
+    post = "📍 Preston PR26 6TZ\n💼 Part-time\n🕐 Hours/Week: 20\n🔗 https://x.co/j1\n✅ Still Available"
+    async def run():
+        return await asyncio.to_thread(main.alert_everyone, post), await asyncio.to_thread(main.alert_everyone, post)
+    first, second = asyncio.run(run()); main.POOL.shutdown(wait=True)
+    assert len(sent) == 1 and second == 0, (sent, first, second)   # alerted once, duplicate suppressed
+    print("thread test ok")
+thread_test()
