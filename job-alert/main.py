@@ -39,6 +39,11 @@ POOL = ThreadPoolExecutor(max_workers=16)
 def alert_everyone(text):
     """Parse the post once, then alert every registered user whose settings match."""
     info = parse_post(text)
+    import settings
+    if os.getenv("NTFY_TOPIC") and settings.load().get("alert_all_until", 0) > time.time():
+        # TEST MODE: alert for every channel post (auto-expires)
+        first = (text.strip().splitlines() or [""])[0][:60]
+        POOL.submit(push, f"TEST: {first}", text[:400], info["url"])
     if not info["available"]:
         return 0
     key = f"{info['url']}|{info['hours']}|{text[:60]}"
@@ -55,7 +60,6 @@ def alert_everyone(text):
             sent.append(POOL.submit(push, title, text[:400], info["url"], u["topic"]))
     # The owner (settings.json via Saved Messages commands) keeps alerting NTFY_TOPIC.
     if os.getenv("NTFY_TOPIC"):
-        import settings
         cfg = settings.load()
         ok, miles = match(info, cfg, home())
         if ok:

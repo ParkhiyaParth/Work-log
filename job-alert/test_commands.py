@@ -42,3 +42,20 @@ def multiline_test():
     assert commands.handle("hello\nworld") is None
     print("multiline ok")
 multiline_test()
+
+def testmode_test():
+    assert "TEST MODE" in commands.handle("testmode 10")
+    assert settings.load()["alert_all_until"] > 0
+    assert "TEST MODE" in commands.handle("status")
+    commands.handle("testmode off"); assert settings.load()["alert_all_until"] == 0
+    assert "❌" in commands.handle("testmode 999")
+    # main.alert_everyone in test mode pushes even for a post that doesn't match
+    os.environ.update(NTFY_TOPIC="t", TG_CHANNEL="x"); os.environ["APP_DB"] = tempfile.mktemp(suffix=".db")
+    import main
+    sent = []; main.push = lambda *a, **k: sent.append(a[0])
+    main.alert_everyone("📍 Preston PR26 6TZ\n🕐 Hours/Week: 40\n✅ Still Available"); assert sent == []
+    commands.handle("testmode 5")
+    main.alert_everyone("📍 Preston PR26 6TZ\n🕐 Hours/Week: 40\n✅ Still Available"); main.POOL.shutdown(wait=True)
+    assert sent and sent[0].startswith("TEST:"), sent
+    print("testmode ok")
+testmode_test()

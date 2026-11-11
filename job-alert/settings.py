@@ -16,6 +16,7 @@ def _defaults():
         "min_pay": float(os.getenv("MIN_PAY", "0")),
         "alert_unknown_hours": os.getenv("ALERT_UNKNOWN_HOURS", "1") == "1",
         "anywhere": os.getenv("ANYWHERE", "0") == "1",
+        "alert_all_until": 0,
         "paused": False,
     }
 

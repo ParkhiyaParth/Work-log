@@ -12,13 +12,17 @@ minhours 10       - min hours/week
 pay 15            - min £/hr (0 = off)
 unknown on|off    - alert when hours not listed
 anywhere on|off   - alert for jobs anywhere (ignore distance)
+testmode 10       - alert for EVERY channel post for 10 min (testing)
+testmode off
 pause / resume    - stop/start alerts
 status            - show settings
 help              - this list"""
 
 
 def status_text(s):
-    return (f"Postcode: {s['postcode']}\nRadius: {s['radius_miles']:g} mi\n"
+    import time
+    left = max(0, int((s.get("alert_all_until", 0) - time.time()) / 60))
+    return ((f"🧪 TEST MODE: all posts alert, {left} min left\n" if left else "") + f"Postcode: {s['postcode']}\nRadius: {s['radius_miles']:g} mi\n"
             f"Hours/week: {s['min_hours']}-{s['max_hours']}\nMin pay: £{s['min_pay']:g}/hr\n"
             f"Anywhere in UK: {'ON' if s['anywhere'] else 'off'}\n"
             f"Alert if hours unknown: {'on' if s['alert_unknown_hours'] else 'off'}\n"
@@ -28,7 +32,7 @@ def status_text(s):
 def handle_one(text):
     """Return a reply string if one line is a command, else None."""
     t = (text or "").strip()
-    m = re.match(r"^/?(postcode|radius|hours|minhours|pay|unknown|anywhere|pause|resume|status|help)\b\s*(.*)$", t, re.I)
+    m = re.match(r"^/?(postcode|radius|hours|minhours|pay|unknown|anywhere|testmode|pause|resume|status|help)\b\s*(.*)$", t, re.I)
     if not m:
         return None
     cmd, arg = m.group(1).lower(), m.group(2).strip()
@@ -46,6 +50,15 @@ def handle_one(text):
             if not re.fullmatch(r"[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}", pc) or not geocode(pc):
                 return "❌ Not a valid UK postcode. Example: postcode E1 6AN"
             return "✅ Location updated.\n" + status_text(settings.save({"postcode": pc}))
+        if cmd == "testmode":
+            import time
+            if arg.lower() == "off":
+                return "✅ Test mode off.\n" + status_text(settings.save({"alert_all_until": 0}))
+            mins = int(arg)
+            if not 1 <= mins <= 120:
+                raise ValueError
+            return f"🧪 Test mode ON for {mins} min: every channel post will alert you.\n" + status_text(
+                settings.save({"alert_all_until": time.time() + mins * 60}))
         if cmd == "anywhere":
             if arg.lower() not in ("on", "off"):
                 return "❌ Use: anywhere on  or  anywhere off"
