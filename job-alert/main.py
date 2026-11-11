@@ -46,7 +46,8 @@ def alert_everyone(text):
     if os.getenv("NTFY_TOPIC") and settings.load().get("alert_all_until", 0) > time.time():
         # TEST MODE: alert for every channel post (auto-expires)
         first = (text.strip().splitlines() or [""])[0][:60]
-        POOL.submit(push, f"TEST: {first}", text[:400], info["url"])
+        fut = POOL.submit(push, f"TEST: {first}", text[:400], info["url"])
+        fut.add_done_callback(lambda f: f.exception() and print("[push error]", f.exception(), flush=True))
     if not info["available"]:
         return 0
     key = f"{info['url']}|{info['hours']}|{text[:60]}"

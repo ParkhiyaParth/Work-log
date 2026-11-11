@@ -8,7 +8,9 @@ def push(title, body, url=None, topic=None):
     sent = False
     topic = topic or os.getenv("NTFY_TOPIC")
     if topic:
-        headers = {"Title": title, "Priority": "5", "Tags": "rotating_light,briefcase"}
+        # HTTP headers must be latin-1: strip emoji etc. from the title (the body keeps full unicode)
+        safe_title = title.encode("ascii", "ignore").decode().strip() or "Job alert"
+        headers = {"Title": safe_title, "Priority": "5", "Tags": "rotating_light,briefcase"}
         if url:
             headers["Click"] = url
             headers["Actions"] = f"view, Apply now, {url}"

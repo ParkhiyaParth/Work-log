@@ -75,3 +75,24 @@ def thread_test():
     assert len(sent) == 1 and second == 0, (sent, first, second)   # alerted once, duplicate suppressed
     print("thread test ok")
 thread_test()
+
+
+def emoji_push_test():
+    """Regression: an emoji in the title must not break the ntfy send (HTTP headers are latin-1)."""
+    import threading, http.server, socketserver, importlib, notify
+    got = {}
+    class H(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            got["title"] = self.headers.get("Title"); got["body"] = self.rfile.read(int(self.headers["Content-Length"])).decode()
+            self.send_response(200); self.end_headers()
+        def log_message(self, *a): pass
+    srv = socketserver.TCPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    os.environ["NTFY_SERVER"] = f"http://127.0.0.1:{srv.server_address[1]}"
+    importlib.reload(notify)
+    notify.push("TEST: 📍 Preston PR26 6TZ", "📍 body keeps emoji", "https://x.co/j", topic="t")
+    assert got["title"] == "TEST:  Preston PR26 6TZ" or got["title"].startswith("TEST:"), got
+    assert "📍" in got["body"], got
+    srv.shutdown(); os.environ.pop("NTFY_SERVER")
+    print("emoji push ok")
+emoji_push_test()
