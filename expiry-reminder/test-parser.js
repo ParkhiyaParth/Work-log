@@ -1,0 +1,13 @@
+const { parse } = require('./parser.js');
+const assert = require('assert');
+const eq = (t, exp) => { const r = parse(t); for (const k in exp) assert.strictEqual(r[k], exp[k], `${t} -> ${k}: ${r[k]}`); };
+eq('{"name":"Smirnoff 70cl","expiry":"31/12/2026","batch":"B7"}', { name: 'Smirnoff 70cl', expiry: '2026-12-31', batch: 'B7' });
+eq('https://x.com/p?name=Coke&exp=2026-11-30', { name: 'Coke', expiry: '2026-11-30' });
+eq('(01)05012345678900(17)261130(10)LOT9', { code: '05012345678900', expiry: '2026-11-30', batch: 'LOT9' });
+eq('010501234567890017261100', { expiry: '2026-11-30' });
+eq('0105012345678900172612001012', { expiry: '2026-12-31', batch: '12' });
+eq('Name: Heineken 4pk\nExpiry: 05/01/2027', { name: 'Heineken 4pk', expiry: '2027-01-05' });
+eq('Guinness Draught 14-02-2027', { name: 'Guinness Draught', expiry: '2027-02-14' });
+eq('5012345678900', { code: '5012345678900', expiry: null });
+eq('exp=12 Mar 2027;product=Cider', { name: 'Cider', expiry: '2027-03-12' });
+console.log('parser ok');

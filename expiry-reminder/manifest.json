@@ -1,0 +1,12 @@
+{
+  "name": "Expiry Reminder",
+  "short_name": "Expiry",
+  "description": "Scan product QR codes and get an end-of-day reminder of stock that is expiring",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#101820",
+  "theme_color": "#d35400",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

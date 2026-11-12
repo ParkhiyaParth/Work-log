@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#d35400">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Expiry">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Expiry Reminder</title>
+<style>
+:root{--bg:#f6f4f1;--card:#fff;--ink:#1f1b16;--mute:#7a736b;--line:#ece7e1;--pri:#d35400;--ok:#2e9e6b;--warn:#e0a100;--bad:#d63031}
+@media (prefers-color-scheme:dark){:root{--bg:#101820;--card:#1a242e;--ink:#f3efe9;--mute:#98a2ab;--line:#26323d}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif}
+body{display:flex;justify-content:center}
+#app{width:100%;max-width:560px;height:100%;display:flex;flex-direction:column}
+main{flex:1;overflow-y:auto;padding:calc(env(safe-area-inset-top) + 14px) 16px 100px}
+.view{display:none}.view.on{display:block}
+h1{font-size:24px;margin:4px 0 2px}h2{font-size:15px;margin:20px 0 6px;color:var(--mute);text-transform:uppercase;letter-spacing:.5px}
+.sub{color:var(--mute);font-size:14px}
+.card{background:var(--card);border-radius:16px;padding:14px;margin-top:10px;border:1px solid var(--line)}
+.banner{background:var(--pri);color:#fff;border-radius:16px;padding:14px;margin-top:12px}
+.banner b{font-size:18px}
+.item{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.item .nm{flex:1;min-width:0}.item .nm b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{font-size:12px;font-weight:700;padding:4px 9px;border-radius:99px;color:#fff;white-space:nowrap}
+.bad{background:var(--bad)}.warn{background:var(--warn)}.ok{background:var(--ok)}
+button,.btn{font:inherit;border:0;border-radius:12px;padding:12px 16px;background:var(--pri);color:#fff;font-weight:700;cursor:pointer}
+button.ghost{background:transparent;color:var(--pri);border:1px solid var(--pri)}
+button.sm{padding:6px 10px;font-size:13px;border-radius:9px}
+button.danger{background:var(--bad)}
+button:disabled{opacity:.5}
+label{display:block;font-size:13px;color:var(--mute);margin:12px 0 4px}
+input,select{width:100%;font:inherit;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.row{display:flex;gap:10px}.row>*{flex:1}
+nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;background:none;color:var(--mute);border-radius:0;padding:12px 4px;font-size:13px}
+nav button.on{color:var(--pri)}
+nav button.scan{color:#fff;background:var(--pri);border-radius:50%;flex:none;width:62px;height:62px;margin-top:-22px;font-size:26px;box-shadow:0 6px 18px rgba(211,84,0,.45)}
+#scanner{position:fixed;inset:0;background:#000;z-index:10;display:none;flex-direction:column}
+#scanner.on{display:flex}
+#scanner video{flex:1;object-fit:cover;width:100%;min-height:0}
+#scanner .bar{padding:14px;display:flex;gap:10px;justify-content:space-between;align-items:center;color:#fff;background:#000}
+#scanner .frame{position:absolute;left:50%;top:40%;width:240px;height:240px;transform:translate(-50%,-50%);border:3px solid #fff;border-radius:20px;box-shadow:0 0 0 999px rgba(0,0,0,.45);pointer-events:none}
+dialog{border:0;border-radius:18px;padding:18px;width:min(92vw,460px);background:var(--card);color:var(--ink)}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+.empty{text-align:center;color:var(--mute);padding:30px 10px}
+.note{font-size:13px;color:var(--mute);margin-top:8px}
+</style>
+</head>
+<body>
+<div id="app">
+<main>
+  <section id="v-today" class="view on">
+    <h1>Today</h1><div class="sub" id="todaySub"></div>
+    <div id="digest"></div>
+  </section>
+  <section id="v-all" class="view">
+    <h1>All stock</h1><div class="sub" id="allSub"></div>
+    <input id="q" placeholder="Search products…" style="margin-top:12px">
+    <div class="card" id="allList"></div>
+  </section>
+  <section id="v-set" class="view">
+    <h1>Settings</h1>
+    <div class="card">
+      <label>End-of-day reminder time</label>
+      <input type="time" id="sTime">
+      <label>Also warn about items expiring within (days)</label>
+      <input type="number" id="sDays" min="0" max="365">
+      <button id="sNotif" class="ghost" style="margin-top:14px;width:100%">Enable phone notifications</button>
+      <div class="note" id="notifNote"></div>
+    </div>
+    <div class="card">
+      <button id="exportBtn" class="ghost" style="width:100%">Export stock as CSV</button>
+      <button id="clearBtn" class="danger" style="width:100%;margin-top:10px">Delete removed / sold history</button>
+    </div>
+    <div class="note">All data stays on this phone. Reminders are shown when the app is opened or running after the reminder time.</div>
+  </section>
+</main>
+<nav>
+  <button data-v="today" class="on">📋<br>Today</button>
+  <button class="scan" id="scanBtn" aria-label="Scan QR">⌗</button>
+  <button data-v="all">📦<br>All</button>
+  <button data-v="set">⚙️<br>Settings</button>
+</nav>
+</div>
+
+<div id="scanner">
+  <video id="video" playsinline muted></video><div class="frame"></div>
+  <div class="bar"><span id="scanMsg">Point at the product QR code</span><button class="ghost sm" id="manualBtn" style="color:#fff;border-color:#fff">Add manually</button><button class="sm danger" id="closeScan">Close</button></div>
+</div>
+
+<dialog id="dlg">
+  <form method="dialog" id="form">
+    <h1 id="dTitle" style="font-size:20px">Add product</h1>
+    <div class="note" id="dNote"></div>
+    <label>Product name</label><input id="fName" required>
+    <label>Expiry date</label><input id="fExp" type="date" required>
+    <div class="row">
+      <div><label>Quantity</label><input id="fQty" type="number" min="1" value="1"></div>
+      <div><label>Batch (optional)</label><input id="fBatch"></div>
+    </div>
+    <div class="row" style="margin-top:16px"><button type="button" class="ghost" id="fCancel">Cancel</button><button type="submit" id="fSave">Save</button></div>
+  </form>
+</dialog>
+
+<script src="parser.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const LS = { items: 'expiry.items', set: 'expiry.settings', shown: 'expiry.digestShown' };
+const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
+const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+let items = load(LS.items, []);
+let settings = Object.assign({ time: '20:00', days: 7 }, load(LS.set, {}));
+const persist = () => { save(LS.items, items); save(LS.set, settings); };
+
+const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const daysLeft = iso => Math.round((Date.parse(iso + 'T00:00:00Z') - Date.parse(todayStr() + 'T00:00:00Z')) / 864e5);
+const fmt = iso => new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const active = () => items.filter(i => !i.done);
+
+function pill(i) {
+  const d = daysLeft(i.expiry);
+  if (d < 0) return `<span class="pill bad">Expired ${-d}d ago</span>`;
+  if (d === 0) return `<span class="pill bad">Today</span>`;
+  if (d <= settings.days) return `<span class="pill warn">${d} day${d > 1 ? 's' : ''}</span>`;
+  return `<span class="pill ok">${d} days</span>`;
+}
+function row(i, actions = true) {
+  return `<div class="item"><div class="nm"><b>${esc(i.name)} ×${i.qty}</b><span class="sub">${fmt(i.expiry)}${i.batch ? ' · batch ' + esc(i.batch) : ''}</span></div>${pill(i)}
+  ${actions ? `<button class="sm ghost" data-act="done" data-id="${i.id}">Remove</button>` : ''}</div>`;
+}
+const section = (title, list) => list.length ? `<h2>${title} (${list.length})</h2><div class="card">${list.map(i => row(i)).join('')}</div>` : '';
+
+function dueLists() {
+  const a = active().sort((x, y) => x.expiry.localeCompare(y.expiry));
+  return {
+    expired: a.filter(i => daysLeft(i.expiry) < 0),
+    today: a.filter(i => daysLeft(i.expiry) === 0),
+    soon: a.filter(i => { const d = daysLeft(i.expiry); return d > 0 && d <= settings.days; })
+  };
+}
+
+function render() {
+  const { expired, today, soon } = dueLists();
+  $('#todaySub').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) + ` · reminder at ${settings.time}`;
+  const n = expired.length + today.length;
+  let h = '';
+  if (n) h += `<div class="banner"><b>${n} product${n > 1 ? 's need' : ' needs'} attention</b><br>${expired.length} expired · ${today.length} expiring today — pull from shelf before closing.</div>`;
+  else if (active().length) h += `<div class="card">✅ Nothing expired or expiring today.</div>`;
+  h += section('Expired', expired) + section('Expires today', today) + section(`Within ${settings.days} days`, soon);
+  if (!active().length) h += `<div class="empty">No stock yet.<br>Tap the scan button to add your first product.</div>`;
+  $('#digest').innerHTML = h;
+
+  const q = $('#q').value.trim().toLowerCase();
+  const all = active().filter(i => !q || i.name.toLowerCase().includes(q)).sort((x, y) => x.expiry.localeCompare(y.expiry));
+  $('#allSub').textContent = `${active().length} batches in stock`;
+  $('#allList').innerHTML = all.length ? all.map(i => row(i)).join('') : '<div class="empty">Nothing here.</div>';
+  $('#sTime').value = settings.time; $('#sDays').value = settings.days;
+  $('#notifNote').textContent = !('Notification' in window) ? 'Notifications are not supported in this browser.'
+    : Notification.permission === 'granted' ? 'Notifications enabled.' : Notification.permission === 'denied' ? 'Blocked — enable them in browser site settings.' : '';
+}
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const it = items.find(i => i.id === b.dataset.id);
+  if (it && confirm(`Remove "${it.name}" from stock?`)) { it.done = todayStr(); persist(); render(); }
+});
+
+// ---- tabs
+document.querySelectorAll('nav button[data-v]').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav button[data-v]').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + b.dataset.v));
+  render();
+});
+$('#q').oninput = render;
+$('#sTime').onchange = e => { settings.time = e.target.value || '20:00'; persist(); render(); };
+$('#sDays').onchange = e => { settings.days = Math.max(0, +e.target.value || 0); persist(); render(); };
+
+// ---- add / edit dialog
+const dlg = $('#dlg');
+function openForm(p = {}) {
+  $('#dNote').textContent = p.expiry || !p.raw ? '' : 'No expiry date found in this QR code — please enter it.';
+  $('#fName').value = p.name || ''; $('#fExp').value = p.expiry || ''; $('#fQty').value = 1; $('#fBatch').value = p.batch || '';
+  dlg.dataset.code = p.code || '';
+  dlg.showModal();
+  (p.name ? $('#fExp') : $('#fName')).focus();
+}
+$('#fCancel').onclick = () => dlg.close();
+$('#form').onsubmit = () => {
+  const name = $('#fName').value.trim(), expiry = $('#fExp').value, qty = Math.max(1, +$('#fQty').value || 1), batch = $('#fBatch').value.trim(), code = dlg.dataset.code;
+  if (!name || !expiry) return;
+  const same = items.find(i => !i.done && i.expiry === expiry && i.name.toLowerCase() === name.toLowerCase() && (i.batch || '') === batch);
+  if (same) same.qty += qty; else items.push({ id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()), name, expiry, qty, batch, code, added: todayStr() });
+  persist(); render();
+};
+
+// ---- scanner
+let stream = null, scanning = false, detector = null, jsQRLoaded = null;
+const loadJsQR = () => jsQRLoaded || (jsQRLoaded = new Promise((res, rej) => {
+  const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s);
+}));
+async function startScan() {
+  $('#scanner').classList.add('on'); $('#scanMsg').textContent = 'Starting camera…';
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+  } catch (e) { $('#scanMsg').textContent = 'Camera not available — use "Add manually".'; return; }
+  const v = $('#video'); v.srcObject = stream; await v.play();
+  if ('BarcodeDetector' in window) { try { detector = new BarcodeDetector({ formats: ['qr_code'] }); } catch (e) { detector = null; } }
+  if (!detector) { try { await loadJsQR(); } catch (e) { $('#scanMsg').textContent = 'Scanner library needs internet once — or use "Add manually".'; return; } }
+  $('#scanMsg').textContent = 'Point at the product QR code';
+  scanning = true; loop();
+}
+const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d', { willReadFrequently: true });
+async function loop() {
+  if (!scanning) return;
+  const v = $('#video');
+  if (v.readyState >= 2) {
+    let text = '';
+    try {
+      if (detector) { const r = await detector.detect(v); text = r[0]?.rawValue || ''; }
+      else {
+        canvas.width = v.videoWidth; canvas.height = v.videoHeight; ctx.drawImage(v, 0, 0);
+        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        text = window.jsQR(img.data, img.width, img.height)?.data || '';
+      }
+    } catch (e) {}
+    if (text) { stopScan(); if (navigator.vibrate) navigator.vibrate(60); openForm(QRParser.parse(text)); return; }
+  }
+  setTimeout(() => requestAnimationFrame(loop), 120);
+}
+function stopScan() { scanning = false; if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; $('#scanner').classList.remove('on'); }
+$('#scanBtn').onclick = startScan;
+$('#closeScan').onclick = stopScan;
+$('#manualBtn').onclick = () => { stopScan(); openForm(); };
+
+// ---- settings actions
+$('#sNotif').onclick = async () => { if ('Notification' in window) { await Notification.requestPermission(); render(); } };
+$('#exportBtn').onclick = () => {
+  const rows = [['name', 'expiry', 'qty', 'batch', 'code', 'removed']].concat(items.map(i => [i.name, i.expiry, i.qty, i.batch || '', i.code || '', i.done || '']));
+  const csv = rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'stock-' + todayStr() + '.csv'; a.click();
+};
+$('#clearBtn').onclick = () => { if (confirm('Delete history of removed items?')) { items = items.filter(i => !i.done); persist(); render(); } };
+
+// ---- end-of-day reminder: fires once per day, at/after the set time, whenever the app is open
+function checkDigest() {
+  const now = new Date(), [h, m] = settings.time.split(':').map(Number);
+  if (now.getHours() * 60 + now.getMinutes() < h * 60 + m) return;
+  if (load(LS.shown, '') === todayStr()) return;
+  const { expired, today } = dueLists();
+  save(LS.shown, todayStr());
+  if (!expired.length && !today.length) return;
+  const lines = [...expired.map(i => `EXPIRED: ${i.name} ×${i.qty}`), ...today.map(i => `Today: ${i.name} ×${i.qty}`)];
+  const body = lines.slice(0, 6).join('\n') + (lines.length > 6 ? `\n+${lines.length - 6} more` : '');
+  if ('Notification' in window && Notification.permission === 'granted' && navigator.serviceWorker) {
+    navigator.serviceWorker.ready.then(r => r.showNotification('Expiry check before closing', { body, icon: 'icon.svg', tag: 'expiry-digest' }));
+  } else alert('Expiry check before closing\n\n' + body);
+}
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+render(); checkDigest();
+setInterval(() => { checkDigest(); render(); }, 60000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkDigest(); render(); } });
+</script>
+</body>
+</html>
