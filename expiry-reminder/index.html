@@ -90,7 +90,7 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
 
 <div id="scanner">
   <video id="video" playsinline muted></video><div class="frame"></div>
-  <div class="bar"><span id="scanMsg">Point at the product QR code</span><button class="ghost sm" id="manualBtn" style="color:#fff;border-color:#fff">Add manually</button><button class="sm danger" id="closeScan">Close</button></div>
+  <div class="bar"><span id="scanMsg">Point at the product QR code</span><label class="btn sm ghost" style="color:#fff;border:1px solid #fff;background:transparent">Photo<input type="file" id="photoIn" accept="image/*" capture="environment" hidden></label><button class="ghost sm" id="manualBtn" style="color:#fff;border-color:#fff">Add manually</button><button class="sm danger" id="closeScan">Close</button></div>
 </div>
 
 <dialog id="dlg">
@@ -191,10 +191,19 @@ function render() {
     : Notification.permission === 'granted' ? 'Notifications enabled.' : Notification.permission === 'denied' ? 'Blocked — enable them in browser site settings.' : '';
 }
 
+// two-tap confirm (dialogs like confirm() are blocked in some viewers)
+function arm(b, label, fn) {
+  if (b.dataset.arm !== '1') {
+    b.dataset.arm = '1'; b.textContent = 'Tap again to confirm'; b.classList.add('danger');
+    setTimeout(() => { if (b.isConnected) { b.dataset.arm = ''; b.textContent = label; if (b.id !== 'clearBtn') b.classList.remove('danger'); } }, 3000);
+    return;
+  }
+  fn();
+}
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if (!b) return;
   const it = items.find(i => i.id === b.dataset.id);
-  if (it && confirm(`Remove "${it.name}" from stock?`)) { it.done = todayStr(); persist(); render(); }
+  if (it) arm(b, 'Remove', () => { it.done = todayStr(); persist(); render(); });
 });
 
 // ---- tabs
@@ -226,14 +235,14 @@ $('#form').onsubmit = () => {
 
 // ---- scanner
 let stream = null, scanning = false, detector = null, jsQRLoaded = null;
-const loadJsQR = () => jsQRLoaded || (jsQRLoaded = new Promise((res, rej) => {
+const loadJsQR = () => window.jsQR ? Promise.resolve() : jsQRLoaded || (jsQRLoaded = new Promise((res, rej) => {
   const s = document.createElement('script'); s.src = 'jsQR.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s);
 }));
 async function startScan() {
   $('#scanner').classList.add('on'); $('#scanMsg').textContent = 'Starting camera…';
   try {
     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
-  } catch (e) { $('#scanMsg').textContent = 'Camera not available — use "Add manually".'; return; }
+  } catch (e) { $('#scanMsg').textContent = 'Camera not available here — use Photo or Add manually.'; return; }
   const v = $('#video'); v.srcObject = stream; await v.play();
   if ('BarcodeDetector' in window) { try { detector = new BarcodeDetector({ formats: ['qr_code'] }); } catch (e) { detector = null; } }
   if (!detector) { try { await loadJsQR(); } catch (e) { $('#scanMsg').textContent = 'Scanner failed to load — use "Add manually".'; return; } }
@@ -261,6 +270,23 @@ async function loop() {
 function stopScan() { scanning = false; if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; $('#scanner').classList.remove('on'); }
 $('#scanBtn').onclick = startScan;
 $('#closeScan').onclick = stopScan;
+$('#photoIn').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  $('#scanMsg').textContent = 'Reading photo…';
+  let text = '';
+  try {
+    const bmp = await createImageBitmap(f);
+    if ('BarcodeDetector' in window) { try { text = (await new BarcodeDetector({ formats: ['qr_code'] }).detect(bmp))[0]?.rawValue || ''; } catch (x) {} }
+    if (!text) {
+      await loadJsQR();
+      const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+      canvas.width = Math.round(bmp.width * k); canvas.height = Math.round(bmp.height * k); ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+      const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      text = window.jsQR(img.data, img.width, img.height)?.data || '';
+    }
+  } catch (x) {}
+  if (text) { stopScan(); openForm(QRParser.parse(text)); } else $('#scanMsg').textContent = 'No QR code found — try a closer, sharper photo.';
+};
 $('#manualBtn').onclick = () => { stopScan(); openForm(); };
 
 // ---- settings actions
@@ -275,7 +301,7 @@ $('#exportBtn').onclick = () => {
   const csv = rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'stock-' + todayStr() + '.csv'; a.click();
 };
-$('#clearBtn').onclick = () => { if (confirm('Delete history of removed items?')) { items = items.filter(i => !i.done); persist(); render(); } };
+$('#clearBtn').onclick = e => arm(e.currentTarget, 'Delete removed / sold history', () => { items = items.filter(i => !i.done); persist(); render(); });
 
 // ---- end-of-day reminder: fires once per day, at/after the set time, whenever the app is open
 function checkDigest() {
