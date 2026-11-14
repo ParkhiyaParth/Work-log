@@ -23,7 +23,7 @@ jobs:
           java-version: 17
       - run: npm install
       - name: Copy web app
-        run: mkdir www && cp index.html parser.js jsQR.js manifest.json icon.svg www/
+        run: mkdir www && cp index.html parser.js zxing.js manifest.json icon.svg www/
       - run: npx cap add android
       - name: Android permissions (camera, notifications, alarms)
         run: |

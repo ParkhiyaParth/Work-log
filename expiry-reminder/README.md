@@ -3,10 +3,12 @@ Installable PWA for an off-licence: scan a product's QR code, save its expiry da
 
 Run: `python3 -m http.server 8000` in this folder, open on the phone (camera needs HTTPS or localhost; GitHub Pages works), then "Add to Home Screen".
 
-## QR formats understood
-JSON (`{"name":"..","expiry":"31/12/2026"}`), URLs with `?name=&exp=`, GS1 codes (`(01)…(17)YYMMDD(10)batch`),
-`key: value` text, or any text containing a date. If the QR has no expiry date you type it in after scanning.
-Dates are read UK-style (day/month/year).
+## Using it
+- **Scan** (any barcode or QR) opens the product. Known product: all its stock batches with quantity and expiry, expired/today in red. New product: enter the name.
+- **Add stock**: quantity, expiry date from the calendar (or +1 week / month / year buttons), then Add stock. Each batch keeps its own date.
+- **+ New product** on the Products tab adds a product by hand; the barcode is optional.
+- A reminder fires at the end-of-day time (Settings) on the day a batch expires.
+- QR codes carrying data (JSON, URL params, GS1 `(17)` expiry, `key: value`) prefill name/expiry; plain barcodes just match the product.
 
 ## Android app
 `.github/workflows/android-expiry.yml` builds `ExpiryReminder.apk` (Capacitor) on every push touching this folder, or via

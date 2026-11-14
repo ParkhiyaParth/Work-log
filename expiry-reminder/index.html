@@ -6,51 +6,77 @@
 <meta name="theme-color" content="#d35400">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Expiry">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg">
 <link rel="apple-touch-icon" href="icon.svg">
 <title>Expiry Reminder</title>
 <style>
-:root{--bg:#f6f4f1;--card:#fff;--ink:#1f1b16;--mute:#7a736b;--line:#ece7e1;--pri:#d35400;--ok:#2e9e6b;--warn:#e0a100;--bad:#d63031}
-@media (prefers-color-scheme:dark){:root{--bg:#101820;--card:#1a242e;--ink:#f3efe9;--mute:#98a2ab;--line:#26323d}}
+:root{--bg:#f6f4f1;--card:#fff;--ink:#1f1b16;--mute:#7a736b;--line:#ece7e1;--pri:#d35400;--ok:#2e9e6b;--warn:#e0a100;--bad:#d63031;--badbg:#fdeaea;--warnbg:#fff6df}
+@media (prefers-color-scheme:dark){:root{--bg:#101820;--card:#1a242e;--ink:#f3efe9;--mute:#98a2ab;--line:#26323d;--badbg:#3a1d21;--warnbg:#3a3017}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif}
 body{display:flex;justify-content:center}
 #app{width:100%;max-width:560px;height:100%;display:flex;flex-direction:column}
-main{flex:1;overflow-y:auto;padding:calc(env(safe-area-inset-top) + 14px) 16px 100px}
+main{flex:1;overflow-y:auto;padding:calc(env(safe-area-inset-top) + 14px) 16px 110px}
 .view{display:none}.view.on{display:block}
-h1{font-size:24px;margin:4px 0 2px}h2{font-size:15px;margin:20px 0 6px;color:var(--mute);text-transform:uppercase;letter-spacing:.5px}
+h1{font-size:26px;margin:4px 0 2px}
+h2{font-size:14px;margin:22px 0 6px;color:var(--mute);text-transform:uppercase;letter-spacing:.6px}
 .sub{color:var(--mute);font-size:14px}
-.card{background:var(--card);border-radius:16px;padding:14px;margin-top:10px;border:1px solid var(--line)}
-.banner{background:var(--pri);color:#fff;border-radius:16px;padding:14px;margin-top:12px}
+.card{background:var(--card);border-radius:16px;padding:6px 14px;margin-top:8px;border:1px solid var(--line);overflow:hidden}
+.banner{border-radius:16px;padding:14px;margin-top:12px;background:var(--bad);color:#fff}
 .banner b{font-size:18px}
-.item{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.banner.good{background:var(--ok)}
+.item{display:flex;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer}
 .item:last-child{border-bottom:0}
 .item .nm{flex:1;min-width:0}.item .nm b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pill{font-size:12px;font-weight:700;padding:4px 9px;border-radius:99px;color:#fff;white-space:nowrap}
-.bad{background:var(--bad)}.warn{background:var(--warn)}.ok{background:var(--ok)}
+.item.bad{background:var(--badbg);margin:0 -14px;padding:12px 14px}
+.item.warn{background:var(--warnbg);margin:0 -14px;padding:12px 14px}
+.pill{font-size:12px;font-weight:800;padding:4px 9px;border-radius:99px;color:#fff;white-space:nowrap}
+.pill.bad{background:var(--bad)}.pill.warn{background:var(--warn);color:#2a2100}.pill.ok{background:var(--ok)}
 button,.btn{font:inherit;border:0;border-radius:12px;padding:12px 16px;background:var(--pri);color:#fff;font-weight:700;cursor:pointer}
-button.ghost{background:transparent;color:var(--pri);border:1px solid var(--pri)}
-button.sm{padding:6px 10px;font-size:13px;border-radius:9px}
-button.danger{background:var(--bad)}
+button.ghost{background:transparent;color:var(--pri);border:1.5px solid var(--pri)}
+button.sm{padding:7px 11px;font-size:14px;border-radius:10px}
+button.danger{background:var(--bad);color:#fff;border-color:var(--bad)}
+button.big{width:100%;padding:16px;font-size:18px}
 button:disabled{opacity:.5}
-label{display:block;font-size:13px;color:var(--mute);margin:12px 0 4px}
-input,select{width:100%;font:inherit;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
-.row{display:flex;gap:10px}.row>*{flex:1}
+label{display:block;font-size:13px;color:var(--mute);margin:14px 0 5px;font-weight:600}
+input{width:100%;font:inherit;padding:13px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink)}
+input[type=date]{font-size:19px;font-weight:600;min-height:54px}
+.row{display:flex;gap:10px;align-items:center}.row>input{flex:1}
 nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
-nav button{flex:1;background:none;color:var(--mute);border-radius:0;padding:12px 4px;font-size:13px}
+nav button{flex:1;background:none;color:var(--mute);border-radius:0;padding:10px 4px;font-size:13px}
 nav button.on{color:var(--pri)}
-nav button.scan{color:#fff;background:var(--pri);border-radius:50%;flex:none;width:62px;height:62px;margin-top:-22px;font-size:26px;box-shadow:0 6px 18px rgba(211,84,0,.45)}
-#scanner{position:fixed;inset:0;background:#000;z-index:10;display:none;flex-direction:column}
-#scanner.on{display:flex}
-#scanner video{flex:1;object-fit:cover;width:100%;min-height:0}
-#scanner .bar{padding:14px;display:flex;gap:10px;justify-content:space-between;align-items:center;color:#fff;background:#000}
-#scanner .frame{position:absolute;left:50%;top:40%;width:240px;height:240px;transform:translate(-50%,-50%);border:3px solid #fff;border-radius:20px;box-shadow:0 0 0 999px rgba(0,0,0,.45);pointer-events:none}
-dialog{border:0;border-radius:18px;padding:18px;width:min(92vw,460px);background:var(--card);color:var(--ink)}
-dialog::backdrop{background:rgba(0,0,0,.5)}
-.empty{text-align:center;color:var(--mute);padding:30px 10px}
+nav button.scan{color:#fff;background:var(--pri);border-radius:50%;flex:none;width:66px;height:66px;margin-top:-24px;font-size:13px;line-height:1.15;box-shadow:0 6px 18px rgba(211,84,0,.45)}
+.empty{text-align:center;color:var(--mute);padding:34px 10px}
 .note{font-size:13px;color:var(--mute);margin-top:8px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.step{display:flex;align-items:center;gap:6px}
+.step button{width:40px;height:40px;padding:0;font-size:22px;border-radius:50%}
+.step b{min-width:34px;text-align:center;font-size:18px}
+.step input{width:70px;text-align:center;font-size:20px;font-weight:700;padding:10px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.chips button{padding:8px 12px;font-size:14px;border-radius:99px}
+dialog{border:0;padding:0;color:var(--ink);background:var(--card)}
+dialog::backdrop{background:rgba(0,0,0,.55)}
+#dProd{width:100%;max-width:560px;max-height:94%;margin:auto auto 0;border-radius:22px 22px 0 0}
+#dProd .sheet{padding:16px 16px calc(env(safe-area-inset-bottom) + 20px)}
+.hd{display:flex;justify-content:space-between;align-items:center}
+.hd b{font-size:20px}
+.x{background:var(--bg);color:var(--ink);width:38px;height:38px;padding:0;border-radius:50%}
+.brow{display:flex;gap:8px;align-items:center;padding:10px;border-radius:12px;margin-top:8px;border:1px solid var(--line)}
+.brow.bad{background:var(--badbg);border-color:var(--bad)}
+.brow.warn{background:var(--warnbg);border-color:var(--warn)}
+.brow .nm{flex:1;min-width:0}.brow .nm b{display:block}
+.alert{background:var(--bad);color:#fff;border-radius:12px;padding:10px 12px;margin-top:12px;font-weight:700}
+.add{background:var(--bg);border-radius:16px;padding:4px 14px 16px;margin-top:18px;border:1px solid var(--line)}
+.add h3{margin:12px 0 0;font-size:17px}
+#scanner{width:100%;height:100%;max-width:none;max-height:none;background:#000;margin:0;overflow:hidden}
+#scanner[open]{display:flex;flex-direction:column}
+#scanner video{flex:1;object-fit:cover;width:100%;min-height:0}
+#scanner .bar{padding:12px 14px calc(env(safe-area-inset-bottom) + 12px);display:flex;gap:10px;justify-content:space-between;align-items:center;color:#fff;background:#000}
+#scanner .bar span{flex:1;font-size:14px}
+#scanner .frame{position:absolute;left:50%;top:38%;width:84%;max-width:380px;height:170px;transform:translate(-50%,-50%);border:3px solid #fff;border-radius:18px;box-shadow:0 0 0 999px rgba(0,0,0,.45);pointer-events:none}
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 96px);transform:translateX(-50%);background:#222;color:#fff;padding:12px 18px;border-radius:99px;font-weight:600;z-index:2147483647;max-width:90%;text-align:center;display:none}
 </style>
 </head>
 <body>
@@ -60,65 +86,110 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
     <h1>Today</h1><div class="sub" id="todaySub"></div>
     <div id="digest"></div>
   </section>
-  <section id="v-all" class="view">
-    <h1>All stock</h1><div class="sub" id="allSub"></div>
-    <input id="q" placeholder="Search products…" style="margin-top:12px">
-    <div class="card" id="allList"></div>
+  <section id="v-prod" class="view">
+    <div class="top"><div><h1>Products</h1><div class="sub" id="prodSub"></div></div><button id="newBtn">+ New product</button></div>
+    <input id="q" placeholder="Search by name or barcode…" style="margin-top:12px">
+    <div class="card" id="prodList"></div>
   </section>
   <section id="v-set" class="view">
     <h1>Settings</h1>
-    <div class="card">
+    <div class="card" style="padding-bottom:16px">
       <label>End-of-day reminder time</label>
       <input type="time" id="sTime">
-      <button id="sNotif" class="ghost" style="margin-top:14px;width:100%">Enable phone notifications</button>
+      <button id="sNotif" class="ghost" style="margin-top:14px;width:100%">Allow notifications</button>
       <div class="note" id="notifNote"></div>
     </div>
-    <div class="card">
-      <button id="exportBtn" class="ghost" style="width:100%">Export stock as CSV</button>
-      <button id="clearBtn" class="danger" style="width:100%;margin-top:10px">Delete removed / sold history</button>
-    </div>
-    <div class="note">All data stays on this phone. Reminders are shown when the app is opened or running after the reminder time.</div>
+    <div class="card" style="padding:14px"><button id="exportBtn" class="ghost" style="width:100%">Export stock as CSV</button></div>
+    <div class="note">Each product's stock has its own expiry date. You get a reminder at the time above on the day a batch expires. Data stays on this phone.</div>
   </section>
 </main>
 <nav>
   <button data-v="today" class="on">📋<br>Today</button>
-  <button class="scan" id="scanBtn" aria-label="Scan QR">⌗</button>
-  <button data-v="all">📦<br>All</button>
+  <button class="scan" id="scanBtn" aria-label="Scan">📷<br>Scan</button>
+  <button data-v="prod">📦<br>Products</button>
   <button data-v="set">⚙️<br>Settings</button>
 </nav>
 </div>
 
-<div id="scanner">
+<dialog id="scanner">
   <video id="video" playsinline muted></video><div class="frame"></div>
-  <div class="bar"><span id="scanMsg">Point at the product QR code</span><label class="btn sm ghost" style="color:#fff;border:1px solid #fff;background:transparent">Photo<input type="file" id="photoIn" accept="image/*" capture="environment" hidden></label><button class="ghost sm" id="manualBtn" style="color:#fff;border-color:#fff">Add manually</button><button class="sm danger" id="closeScan">Close</button></div>
-</div>
-
-<dialog id="dlg">
-  <form method="dialog" id="form">
-    <h1 id="dTitle" style="font-size:20px">Add product</h1>
-    <div class="note" id="dNote"></div>
-    <label>Product name</label><input id="fName" required>
-    <label>Expiry date</label><input id="fExp" type="date" required>
-    <div class="row">
-      <div><label>Quantity</label><input id="fQty" type="number" min="1" value="1"></div>
-      <div><label>Batch (optional)</label><input id="fBatch"></div>
-    </div>
-    <div class="row" style="margin-top:16px"><button type="button" class="ghost" id="fCancel">Cancel</button><button type="submit" id="fSave">Save</button></div>
-  </form>
+  <div class="bar"><span id="scanMsg">Point at the barcode or QR code</span>
+    <label class="btn sm ghost" style="color:#fff;border:1.5px solid #fff;background:transparent">Photo<input type="file" id="photoIn" accept="image/*" capture="environment" hidden></label>
+    <button class="sm danger" id="closeScan" type="button">Close</button></div>
 </dialog>
 
+<dialog id="dProd">
+  <div class="sheet">
+    <div class="hd"><b id="pTitle">New product</b><button class="x" id="pClose" type="button" aria-label="Close">✕</button></div>
+    <label>Product name</label><input id="pName" autocomplete="off" placeholder="e.g. Smirnoff Vodka 70cl">
+    <label>Barcode (optional)</label>
+    <div class="row"><input id="pCode" inputmode="numeric" autocomplete="off" placeholder="Scan or type"><button class="ghost" id="pScan" type="button">Scan</button></div>
+    <div id="pStock"></div>
+    <div class="add">
+      <h3 id="addTitle">Add stock</h3>
+      <label>Quantity</label>
+      <div class="step"><button type="button" id="qMinus">−</button><input id="pQty" type="number" inputmode="numeric" min="1" value="1"><button type="button" id="qPlus">+</button></div>
+      <label>Expiry date (tap to open calendar)</label>
+      <input id="pDate" type="date">
+      <div class="chips" id="chips"></div>
+      <div class="note" id="pDateTxt"></div>
+      <button class="big" id="pAdd" type="button" style="margin-top:14px">Add stock</button>
+    </div>
+    <button class="ghost sm" id="pDel" type="button" style="margin-top:16px;color:var(--bad);border-color:var(--bad)">Delete product</button>
+  </div>
+</dialog>
+<div id="toast"></div>
+
 <script src="parser.js"></script>
+<script src="zxing.js"></script>
 <script>
 const $ = s => document.querySelector(s);
-const LS = { items: 'expiry.items', set: 'expiry.settings', shown: 'expiry.digestShown' };
+const LS = { prod: 'expiry.products', bat: 'expiry.batches', set: 'expiry.settings', shown: 'expiry.digestShown', old: 'expiry.items' };
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
-const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
-let items = load(LS.items, []);
-let settings = Object.assign({ time: '20:00', days: 7 }, load(LS.set, {}));
-const persist = () => { save(LS.items, items); save(LS.set, settings); scheduleReminders(); };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+let products = load(LS.prod, null), batches = load(LS.bat, []);
+let settings = Object.assign({ time: '20:00' }, load(LS.set, {}));
 
-// ---- Android app: real scheduled notifications, one per expiry day, delivered even when the app is closed
+// migrate the earlier single-list version
+if (products === null) {
+  products = [];
+  load(LS.old, []).filter(i => !i.done).forEach(i => {
+    let p = products.find(x => (i.code && x.barcode === i.code) || x.name.toLowerCase() === i.name.toLowerCase());
+    if (!p) { p = { id: uid(), name: i.name, barcode: i.code || '' }; products.push(p); }
+    batches.push({ id: uid(), pid: p.id, qty: i.qty || 1, expiry: i.expiry });
+  });
+  save(LS.prod, products); save(LS.bat, batches);
+}
+const persist = () => { save(LS.prod, products); save(LS.bat, batches); save(LS.set, settings); scheduleReminders(); };
+
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const todayStr = () => ymd(new Date());
+const daysLeft = iso => Math.round((Date.parse(iso + 'T00:00:00Z') - Date.parse(todayStr() + 'T00:00:00Z')) / 864e5);
+const fmt = iso => new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+const fmtLong = iso => new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const lvl = d => d <= 0 ? 'bad' : d <= 7 ? 'warn' : 'ok';
+const rel = d => d < 0 ? `EXPIRED ${-d} day${-d > 1 ? 's' : ''} ago` : d === 0 ? 'EXPIRES TODAY' : d === 1 ? 'Expires tomorrow' : `${d} days left`;
+const norm = s => String(s || '').trim().replace(/^0+/, '').toLowerCase();
+const prodOf = id => products.find(p => p.id === id);
+const batchesOf = pid => batches.filter(b => b.pid === pid).sort((a, b) => a.expiry.localeCompare(b.expiry));
+let toastT;
+// a toast must also be visible above an open modal sheet, so it lives inside the sheet while one is open
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.style.display = 'block';
+  const dlgOpen = $('#dProd').open; if (dlgOpen) { $('#dProd').appendChild(t); } else { document.body.appendChild(t); }
+  clearTimeout(toastT); toastT = setTimeout(() => t.style.display = 'none', 2600);
+}
+
+// ---- Android app: real scheduled notifications, one per expiry day (arrive even when the app is closed)
 const LN = () => window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() ? Capacitor.Plugins.LocalNotifications : null;
+function dayLines(arr) {
+  const by = {};
+  arr.forEach(b => { by[b.pid] = (by[b.pid] || 0) + b.qty; });
+  return Object.entries(by).map(([pid, q]) => `${prodOf(pid)?.name || 'Product'} ×${q}`);
+}
 async function scheduleReminders() {
   const ln = LN(); if (!ln) return;
   try {
@@ -127,16 +198,16 @@ async function scheduleReminders() {
     const pend = await ln.getPending();
     if (pend.notifications.length) await ln.cancel({ notifications: pend.notifications.map(n => ({ id: n.id })) });
     const [h, m] = settings.time.split(':').map(Number), now = Date.now(), byDay = {};
-    active().forEach(i => { (byDay[i.expiry] = byDay[i.expiry] || []).push(i); });
+    batches.forEach(b => { (byDay[b.expiry] = byDay[b.expiry] || []).push(b); });
     const list = [];
     for (const [day, arr] of Object.entries(byDay)) {
       const [y, mo, d] = day.split('-').map(Number), at = new Date(y, mo - 1, d, h, m, 0);
       if (at.getTime() <= now) continue;
-      const lines = arr.map(i => `${i.name} ×${i.qty}`);
+      const lines = dayLines(arr);
       list.push({
         id: Math.floor(Date.UTC(y, mo - 1, d) / 864e5),
-        title: 'Expiry check before closing',
-        body: lines.slice(0, 6).join('\n') + (lines.length > 6 ? `\n+${lines.length - 6} more` : '') + '\nexpires today',
+        title: 'Expiring today — check before closing',
+        body: lines.slice(0, 6).join('\n') + (lines.length > 6 ? `\n+${lines.length - 6} more` : ''),
         schedule: { at, allowWhileIdle: true }
       });
     }
@@ -144,152 +215,82 @@ async function scheduleReminders() {
   } catch (e) { console.error(e); }
 }
 
-const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-const daysLeft = iso => Math.round((Date.parse(iso + 'T00:00:00Z') - Date.parse(todayStr() + 'T00:00:00Z')) / 864e5);
-const fmt = iso => new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
-const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const active = () => items.filter(i => !i.done);
-
-function pill(i) {
-  const d = daysLeft(i.expiry);
-  if (d < 0) return `<span class="pill bad">Expired ${-d}d ago</span>`;
-  if (d === 0) return `<span class="pill bad">Today</span>`;
-  return `<span class="pill ${d <= 7 ? 'warn' : 'ok'}">${d} day${d > 1 ? 's' : ''}</span>`;
+// ---- Today screen
+function row(b, opts = {}) {
+  const p = prodOf(b.pid), d = daysLeft(b.expiry), l = lvl(d);
+  return `<div class="item ${l === 'ok' ? '' : l}" data-open="${b.pid}"><div class="nm"><b>${esc(p?.name || 'Product')}</b><span class="sub">${b.qty} unit${b.qty > 1 ? 's' : ''} · ${fmt(b.expiry)}</span></div>
+    <span class="pill ${l}">${d < 0 ? `${-d}d ago` : d === 0 ? 'TODAY' : d + 'd'}</span>
+    ${opts.remove ? `<button class="sm ghost" data-act="rm" data-id="${b.id}">Remove</button>` : ''}</div>`;
 }
-function row(i, actions = true) {
-  return `<div class="item"><div class="nm"><b>${esc(i.name)} ×${i.qty}</b><span class="sub">${fmt(i.expiry)}${i.batch ? ' · batch ' + esc(i.batch) : ''}</span></div>${pill(i)}
-  ${actions ? `<button class="sm ghost" data-act="done" data-id="${i.id}">Remove</button>` : ''}</div>`;
-}
-const section = (title, list) => list.length ? `<h2>${title} (${list.length})</h2><div class="card">${list.map(i => row(i)).join('')}</div>` : '';
+const section = (t, list, remove) => list.length ? `<h2>${t} (${list.length})</h2><div class="card">${list.map(b => row(b, { remove })).join('')}</div>` : '';
 
-function dueLists() {
-  const a = active().sort((x, y) => x.expiry.localeCompare(y.expiry));
-  return {
-    expired: a.filter(i => daysLeft(i.expiry) < 0),
-    today: a.filter(i => daysLeft(i.expiry) === 0)
-  };
+function renderToday() {
+  const a = batches.slice().sort((x, y) => x.expiry.localeCompare(y.expiry));
+  const today = a.filter(b => daysLeft(b.expiry) === 0), expired = a.filter(b => daysLeft(b.expiry) < 0);
+  const soon = a.filter(b => { const d = daysLeft(b.expiry); return d > 0 && d <= 7; });
+  $('#todaySub').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) + ` · reminder at ${settings.time}`;
+  let h = '';
+  const n = today.length + expired.length;
+  if (n) h += `<div class="banner"><b>⚠ ${n} batch${n > 1 ? 'es need' : ' needs'} action</b><br>${today.length} expiring today · ${expired.length} already expired — take them off the shelf.</div>`;
+  else if (batches.length) h += `<div class="banner good"><b>✓ All good</b><br>Nothing expires today.</div>`;
+  h += section('Expires today', today, true) + section('Expired — still in stock', expired, true) + section('Coming up this week', soon, false);
+  if (!products.length) h += `<div class="empty">No products yet.<br>Tap <b>Scan</b> to scan a barcode,<br>or <b>Products → + New product</b> to type one in.</div>`;
+  $('#digest').innerHTML = h;
+}
+
+// ---- Products screen
+function renderProducts() {
+  const q = $('#q').value.trim().toLowerCase();
+  const info = products.map(p => {
+    const bs = batchesOf(p.id), alerts = bs.filter(b => daysLeft(b.expiry) <= 0);
+    return { p, bs, alerts, total: bs.reduce((s, b) => s + b.qty, 0), next: bs[0] };
+  }).filter(x => !q || x.p.name.toLowerCase().includes(q) || (q.length > 2 && norm(x.p.barcode).includes(norm(q))))
+    .sort((x, y) => (y.alerts.length > 0) - (x.alerts.length > 0) || (x.next ? x.next.expiry : '9').localeCompare(y.next ? y.next.expiry : '9') || x.p.name.localeCompare(y.p.name));
+  $('#prodSub').textContent = `${products.length} product${products.length === 1 ? '' : 's'}`;
+  $('#prodList').innerHTML = info.length ? info.map(x => {
+    const d = x.next ? daysLeft(x.next.expiry) : null;
+    const status = x.alerts.length ? `<span class="pill bad">${x.alerts.reduce((s, b) => s + b.qty, 0)} EXPIRED/TODAY</span>`
+      : x.next ? `<span class="pill ${lvl(d)}">${d}d</span>` : '<span class="pill ok">no stock</span>';
+    return `<div class="item ${x.alerts.length ? 'bad' : ''}" data-open="${x.p.id}"><div class="nm"><b>${esc(x.p.name)}</b><span class="sub">${x.total} in stock${x.next ? ' · next expiry ' + fmt(x.next.expiry) : ''}${x.p.barcode ? ' · ' + esc(x.p.barcode) : ''}</span></div>${status}</div>`;
+  }).join('') : `<div class="empty">${products.length ? 'No match.' : 'No products yet.'}</div>`;
 }
 
 function render() {
-  const { expired, today } = dueLists();
-  $('#todaySub').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) + ` · reminder at ${settings.time}`;
-  const n = expired.length + today.length;
-  let h = '';
-  if (n) h += `<div class="banner"><b>${n} product${n > 1 ? 's need' : ' needs'} attention</b><br>${today.length} expiring today${expired.length ? ' · ' + expired.length + ' overdue' : ''} — pull from shelf before closing.</div>`;
-  else if (active().length) h += `<div class="card">✅ Nothing expired or expiring today.</div>`;
-  h += section('Expires today', today) + section('Overdue — still in stock', expired);
-  if (!active().length) h += `<div class="empty">No stock yet.<br>Tap the scan button to add your first product.</div>`;
-  $('#digest').innerHTML = h;
-
-  const q = $('#q').value.trim().toLowerCase();
-  const all = active().filter(i => !q || i.name.toLowerCase().includes(q)).sort((x, y) => x.expiry.localeCompare(y.expiry));
-  $('#allSub').textContent = `${active().length} batches in stock`;
-  $('#allList').innerHTML = all.length ? all.map(i => row(i)).join('') : '<div class="empty">Nothing here.</div>';
+  renderToday(); renderProducts();
   $('#sTime').value = settings.time;
-  if (LN()) { LN().checkPermissions().then(p => { $('#notifNote').textContent = p.display === 'granted' ? 'Reminders enabled — they arrive even when the app is closed.' : 'Tap the button to allow reminders.'; }); return; }
-  $('#notifNote').textContent = !('Notification' in window) ? 'Notifications are not supported in this browser.'
-    : Notification.permission === 'granted' ? 'Notifications enabled.' : Notification.permission === 'denied' ? 'Blocked — enable them in browser site settings.' : '';
+  if (LN()) LN().checkPermissions().then(p => { $('#notifNote').textContent = p.display === 'granted' ? 'Reminders are on — they arrive even when the app is closed.' : 'Tap the button to allow reminders.'; });
+  else $('#notifNote').textContent = !('Notification' in window) ? 'Notifications are not supported in this browser.' : Notification.permission === 'granted' ? 'Notifications enabled.' : Notification.permission === 'denied' ? 'Blocked — enable them in browser site settings.' : '';
 }
 
-// two-tap confirm (dialogs like confirm() are blocked in some viewers)
+// two-tap confirm
 function arm(b, label, fn) {
   if (b.dataset.arm !== '1') {
-    b.dataset.arm = '1'; b.textContent = 'Tap again to confirm'; b.classList.add('danger');
-    setTimeout(() => { if (b.isConnected) { b.dataset.arm = ''; b.textContent = label; if (b.id !== 'clearBtn') b.classList.remove('danger'); } }, 3000);
+    b.dataset.arm = '1'; const old = b.textContent; b.textContent = 'Tap again to confirm'; b.classList.add('danger');
+    setTimeout(() => { if (b.isConnected) { b.dataset.arm = ''; b.textContent = label || old; b.classList.remove('danger'); } }, 3000);
     return;
   }
   fn();
 }
+
 document.addEventListener('click', e => {
-  const b = e.target.closest('[data-act]'); if (!b) return;
-  const it = items.find(i => i.id === b.dataset.id);
-  if (it) arm(b, 'Remove', () => { it.done = todayStr(); persist(); render(); });
+  const a = e.target.closest('[data-act]');
+  if (a) {
+    const b = batches.find(x => x.id === a.dataset.id); if (!b) return;
+    if (a.dataset.act === 'rm') arm(a, 'Remove', () => { batches = batches.filter(x => x !== b); persist(); render(); renderStock(); });
+    else if (a.dataset.act === 'inc') { b.qty++; persist(); render(); renderStock(); }
+    else if (a.dataset.act === 'dec' && b.qty > 1) { b.qty--; persist(); render(); renderStock(); }
+    return;
+  }
+  const o = e.target.closest('[data-open]'); if (o) openProduct(o.dataset.open);
 });
 
-// ---- tabs
 document.querySelectorAll('nav button[data-v]').forEach(b => b.onclick = () => {
   document.querySelectorAll('nav button[data-v]').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + b.dataset.v));
   render();
 });
-$('#q').oninput = render;
+$('#q').oninput = renderProducts;
 $('#sTime').onchange = e => { settings.time = e.target.value || '20:00'; persist(); render(); };
-
-// ---- add / edit dialog
-const dlg = $('#dlg');
-function openForm(p = {}) {
-  $('#dNote').textContent = p.expiry || !p.raw ? '' : 'No expiry date found in this QR code — please enter it.';
-  $('#fName').value = p.name || ''; $('#fExp').value = p.expiry || ''; $('#fQty').value = 1; $('#fBatch').value = p.batch || '';
-  dlg.dataset.code = p.code || '';
-  dlg.showModal();
-  (p.name ? $('#fExp') : $('#fName')).focus();
-}
-$('#fCancel').onclick = () => dlg.close();
-$('#form').onsubmit = () => {
-  const name = $('#fName').value.trim(), expiry = $('#fExp').value, qty = Math.max(1, +$('#fQty').value || 1), batch = $('#fBatch').value.trim(), code = dlg.dataset.code;
-  if (!name || !expiry) return;
-  const same = items.find(i => !i.done && i.expiry === expiry && i.name.toLowerCase() === name.toLowerCase() && (i.batch || '') === batch);
-  if (same) same.qty += qty; else items.push({ id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()), name, expiry, qty, batch, code, added: todayStr() });
-  persist(); render();
-};
-
-// ---- scanner
-let stream = null, scanning = false, detector = null, jsQRLoaded = null;
-const loadJsQR = () => window.jsQR ? Promise.resolve() : jsQRLoaded || (jsQRLoaded = new Promise((res, rej) => {
-  const s = document.createElement('script'); s.src = 'jsQR.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s);
-}));
-async function startScan() {
-  $('#scanner').classList.add('on'); $('#scanMsg').textContent = 'Starting camera…';
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
-  } catch (e) { $('#scanMsg').textContent = 'Camera not available here — use Photo or Add manually.'; return; }
-  const v = $('#video'); v.srcObject = stream; await v.play();
-  if ('BarcodeDetector' in window) { try { detector = new BarcodeDetector({ formats: ['qr_code'] }); } catch (e) { detector = null; } }
-  if (!detector) { try { await loadJsQR(); } catch (e) { $('#scanMsg').textContent = 'Scanner failed to load — use "Add manually".'; return; } }
-  $('#scanMsg').textContent = 'Point at the product QR code';
-  scanning = true; loop();
-}
-const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d', { willReadFrequently: true });
-async function loop() {
-  if (!scanning) return;
-  const v = $('#video');
-  if (v.readyState >= 2) {
-    let text = '';
-    try {
-      if (detector) { const r = await detector.detect(v); text = r[0]?.rawValue || ''; }
-      else {
-        canvas.width = v.videoWidth; canvas.height = v.videoHeight; ctx.drawImage(v, 0, 0);
-        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        text = window.jsQR(img.data, img.width, img.height)?.data || '';
-      }
-    } catch (e) {}
-    if (text) { stopScan(); if (navigator.vibrate) navigator.vibrate(60); openForm(QRParser.parse(text)); return; }
-  }
-  setTimeout(() => requestAnimationFrame(loop), 120);
-}
-function stopScan() { scanning = false; if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; $('#scanner').classList.remove('on'); }
-$('#scanBtn').onclick = startScan;
-$('#closeScan').onclick = stopScan;
-$('#photoIn').onchange = async e => {
-  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-  $('#scanMsg').textContent = 'Reading photo…';
-  let text = '';
-  try {
-    const bmp = await createImageBitmap(f);
-    if ('BarcodeDetector' in window) { try { text = (await new BarcodeDetector({ formats: ['qr_code'] }).detect(bmp))[0]?.rawValue || ''; } catch (x) {} }
-    if (!text) {
-      await loadJsQR();
-      const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
-      canvas.width = Math.round(bmp.width * k); canvas.height = Math.round(bmp.height * k); ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
-      const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      text = window.jsQR(img.data, img.width, img.height)?.data || '';
-    }
-  } catch (x) {}
-  if (text) { stopScan(); openForm(QRParser.parse(text)); } else $('#scanMsg').textContent = 'No QR code found — try a closer, sharper photo.';
-};
-$('#manualBtn').onclick = () => { stopScan(); openForm(); };
-
-// ---- settings actions
 $('#sNotif').onclick = async () => {
   const ln = LN();
   if (ln) { await ln.requestPermissions(); scheduleReminders(); }
@@ -297,32 +298,204 @@ $('#sNotif').onclick = async () => {
   render();
 };
 $('#exportBtn').onclick = () => {
-  const rows = [['name', 'expiry', 'qty', 'batch', 'code', 'removed']].concat(items.map(i => [i.name, i.expiry, i.qty, i.batch || '', i.code || '', i.done || '']));
-  const csv = rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
+  const rows = [['product', 'barcode', 'quantity', 'expiry']].concat(batches.map(b => { const p = prodOf(b.pid) || {}; return [p.name, p.barcode || '', b.qty, b.expiry]; }));
+  const csv = rows.map(r => r.map(c => '"' + String(c ?? '').replace(/"/g, '""') + '"').join(',')).join('\n');
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'stock-' + todayStr() + '.csv'; a.click();
 };
-$('#clearBtn').onclick = e => arm(e.currentTarget, 'Delete removed / sold history', () => { items = items.filter(i => !i.done); persist(); render(); });
 
-// ---- end-of-day reminder: fires once per day, at/after the set time, whenever the app is open
+// ---- product sheet: shows all stock + expiry dates of one product, and adds new stock
+const dlg = $('#dProd');
+let cur = null; // product id, or null for a new product
+function renderStock() {
+  const box = $('#pStock');
+  if (!cur) { box.innerHTML = ''; return; }
+  const bs = batchesOf(cur), bad = bs.filter(b => daysLeft(b.expiry) <= 0), total = bs.reduce((s, b) => s + b.qty, 0);
+  const badQty = bad.reduce((s, b) => s + b.qty, 0);
+  let h = '';
+  if (bad.length) h += `<div class="alert">⚠ ${badQty} unit${badQty > 1 ? 's' : ''} expired or expiring today — remove from shelf</div>`;
+  h += `<h2>In stock · ${total} total</h2>`;
+  h += bs.length ? bs.map(b => {
+    const d = daysLeft(b.expiry), l = lvl(d);
+    return `<div class="brow ${l === 'ok' ? '' : l}"><div class="nm"><b>${fmt(b.expiry)}</b><span class="pill ${l}">${rel(d)}</span></div>
+      <div class="step"><button type="button" data-act="dec" data-id="${b.id}">−</button><b>${b.qty}</b><button type="button" data-act="inc" data-id="${b.id}">+</button></div>
+      <button type="button" class="sm ghost" data-act="rm" data-id="${b.id}">Remove</button></div>`;
+  }).join('') : '<div class="note">No stock yet. Add some below.</div>';
+  box.innerHTML = h;
+}
+function setDateNote() {
+  const v = $('#pDate').value;
+  $('#pDateTxt').textContent = v ? `${fmtLong(v)} · ${rel(daysLeft(v))}` : '';
+}
+function openProduct(pid, pre = {}) {
+  cur = pid || null;
+  const p = pid ? prodOf(pid) : null;
+  $('#pTitle').textContent = p ? p.name : 'New product';
+  $('#pName').value = p ? p.name : (pre.name || '');
+  $('#pCode').value = p ? p.barcode || '' : (pre.barcode || '');
+  $('#pQty').value = 1;
+  $('#pDate').value = pre.expiry || '';
+  $('#addTitle').textContent = p ? 'Add new stock' : 'Add first stock';
+  $('#pDel').style.display = p ? '' : 'none';
+  setDateNote(); renderStock();
+  if (!dlg.open) dlg.showModal();
+  dlg.scrollTop = 0;
+}
+// create or update the product from the name/barcode fields; returns false if invalid
+function saveProduct(quiet) {
+  const name = $('#pName').value.trim(), code = $('#pCode').value.trim();
+  if (!name) { if (!quiet) { toast('Enter the product name'); $('#pName').focus(); } return false; }
+  const clash = code && products.find(x => norm(x.barcode) === norm(code) && x.id !== cur);
+  if (clash) { if (!quiet) toast(`That barcode is already used by "${clash.name}"`); return false; }
+  if (cur) { const p = prodOf(cur); p.name = name; p.barcode = code; }
+  else { const p = { id: uid(), name, barcode: code }; products.push(p); cur = p.id; }
+  $('#pTitle').textContent = name; $('#addTitle').textContent = 'Add new stock'; $('#pDel').style.display = '';
+  persist(); render();
+  return true;
+}
+$('#pAdd').onclick = () => {
+  const date = $('#pDate').value, qty = Math.max(1, Math.floor(+$('#pQty').value || 1));
+  if (!$('#pName').value.trim()) { toast('Enter the product name'); $('#pName').focus(); return; }
+  if (!date) { toast('Pick the expiry date first'); $('#pDate').focus(); return; }
+  if (!saveProduct()) return;
+  const same = batches.find(b => b.pid === cur && b.expiry === date);
+  if (same) same.qty += qty; else batches.push({ id: uid(), pid: cur, qty, expiry: date, added: todayStr() });
+  persist(); render(); renderStock();
+  toast(`Added ${qty} × ${prodOf(cur).name} · expires ${fmt(date)}`);
+  $('#pDate').value = ''; $('#pQty').value = 1; setDateNote();
+};
+function closeProduct() { if (dlg.open) { saveProduct(true); dlg.close(); } render(); }
+$('#pClose').onclick = closeProduct;
+dlg.addEventListener('cancel', () => { saveProduct(true); });
+dlg.addEventListener('close', () => { document.body.appendChild($('#toast')); render(); });
+$('#pName').onchange = () => saveProduct(true);
+$('#pCode').onchange = () => saveProduct(true);
+$('#qMinus').onclick = () => { $('#pQty').value = Math.max(1, (+$('#pQty').value || 1) - 1); };
+$('#qPlus').onclick = () => { $('#pQty').value = (+$('#pQty').value || 0) + 1; };
+$('#pDate').oninput = setDateNote;
+$('#pDel').onclick = e => arm(e.currentTarget, 'Delete product', () => {
+  batches = batches.filter(b => b.pid !== cur); products = products.filter(p => p.id !== cur); cur = null; persist(); dlg.close(); render(); toast('Product deleted');
+});
+$('#newBtn').onclick = () => openProduct(null);
+// expiry quick-picks
+[['1 week', 7], ['1 month', 'm1'], ['3 months', 'm3'], ['6 months', 'm6'], ['1 year', 'm12']].forEach(([t, v]) => {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'ghost'; b.textContent = '+' + t;
+  b.onclick = () => {
+    const d = new Date(); if (typeof v === 'number') d.setDate(d.getDate() + v); else d.setMonth(d.getMonth() + +v.slice(1));
+    $('#pDate').value = ymd(d); setDateNote();
+  };
+  $('#chips').appendChild(b);
+});
+
+// ---- scanner (barcodes and QR codes)
+const sc = $('#scanner');
+let stream = null, scanning = false, detector = null, misses = 0, zx = null, onScan = null, ready = null;
+const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d', { willReadFrequently: true });
+const FORMATS = ['qr_code', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'code_93', 'itf', 'codabar', 'data_matrix'];
+function initDecoders() {
+  return ready || (ready = (async () => {
+    if ('BarcodeDetector' in window) {
+      try { const sup = await BarcodeDetector.getSupportedFormats(); detector = new BarcodeDetector({ formats: FORMATS.filter(f => sup.includes(f)) }); } catch (e) { detector = null; }
+    }
+    const Z = window.ZXing, hints = new Map(), F = Z.BarcodeFormat;
+    hints.set(Z.DecodeHintType.TRY_HARDER, true);
+    hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [F.QR_CODE, F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128, F.CODE_39, F.CODE_93, F.ITF, F.DATA_MATRIX]);
+    zx = new Z.MultiFormatReader(); zx.setHints(hints);
+  })());
+}
+function zxDecode(src, w, h) {
+  const k = Math.min(1, 960 / Math.max(w, h));
+  canvas.width = Math.round(w * k); canvas.height = Math.round(h * k); ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
+  try {
+    const Z = window.ZXing;
+    return zx.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(canvas)))).getText();
+  } catch (e) { return ''; }
+}
+async function decode(src, w, h, thorough) {
+  if (detector && (thorough || misses < 40)) {
+    try { const r = await detector.detect(src); if (r[0]?.rawValue) return r[0].rawValue; } catch (e) {}
+    if (!thorough && ++misses < 40) return '';
+  }
+  return zxDecode(src, w, h);
+}
+async function startScan(cb) {
+  onScan = cb; misses = 0;
+  sc.showModal(); $('#scanMsg').textContent = 'Starting camera…';
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+  } catch (e) { $('#scanMsg').textContent = 'Camera not available — use Photo, or close and type it in.'; return; }
+  const v = $('#video'); v.srcObject = stream; await v.play();
+  try { await stream.getVideoTracks()[0].applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch (e) {}
+  await initDecoders();
+  $('#scanMsg').textContent = 'Point at the barcode or QR code';
+  scanning = true; loop();
+}
+async function loop() {
+  if (!scanning) return;
+  const v = $('#video');
+  if (v.readyState >= 2 && v.videoWidth) {
+    const text = await decode(v, v.videoWidth, v.videoHeight, false);
+    if (text && scanning) { found(text); return; }
+  }
+  setTimeout(() => requestAnimationFrame(loop), 120);
+}
+function found(text) { if (navigator.vibrate) navigator.vibrate(60); const cb = onScan; stopScan(); if (cb) cb(text); }
+function stopScan() {
+  scanning = false;
+  if (stream) stream.getTracks().forEach(t => t.stop()); stream = null;
+  if (sc.open) sc.close();
+}
+sc.addEventListener('cancel', stopScan);
+$('#closeScan').onclick = stopScan;
+$('#photoIn').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  $('#scanMsg').textContent = 'Reading photo…';
+  let text = '';
+  try { await initDecoders(); const bmp = await createImageBitmap(f); text = await decode(bmp, bmp.width, bmp.height, true); } catch (x) {}
+  if (text) found(text); else $('#scanMsg').textContent = 'No code found — try a closer, sharper photo.';
+};
+
+// what a scan means
+function interpret(text) {
+  const r = QRParser.parse(text);
+  const structured = r.expiry || /[{:=\n]|https?:/i.test(text);
+  return { code: structured ? (r.code || '') : text.trim(), name: structured ? r.name : '', expiry: r.expiry || '' };
+}
+function lookup(text) {
+  const s = interpret(text);
+  const p = (s.code && products.find(x => norm(x.barcode) === norm(s.code))) || (s.name && products.find(x => x.name.toLowerCase() === s.name.toLowerCase()));
+  openProduct(p ? p.id : null, { name: s.name, barcode: s.code, expiry: s.expiry });
+  toast(p ? `Found: ${p.name}` : 'New product — enter its name');
+}
+$('#scanBtn').onclick = () => startScan(lookup);
+$('#pScan').onclick = () => startScan(t => {
+  const s = interpret(t);
+  $('#pCode').value = s.code;
+  if (s.name && !$('#pName').value) $('#pName').value = s.name;
+  if (s.expiry) { $('#pDate').value = s.expiry; setDateNote(); }
+  const other = s.code && products.find(x => norm(x.barcode) === norm(s.code) && x.id !== cur);
+  if (other) { toast(`Barcode already belongs to "${other.name}" — opening it`); openProduct(other.id, { expiry: s.expiry }); return; }
+  saveProduct(true);
+});
+
+// ---- web fallback: reminder when the app is open (the Android app uses real notifications)
 function checkDigest() {
   const now = new Date(), [h, m] = settings.time.split(':').map(Number);
   if (now.getHours() * 60 + now.getMinutes() < h * 60 + m) return;
   if (load(LS.shown, '') === todayStr()) return;
-  const { today } = dueLists();
+  const today = batches.filter(b => daysLeft(b.expiry) === 0);
   save(LS.shown, todayStr());
   if (!today.length) return;
-  const lines = today.map(i => `${i.name} ×${i.qty} expires today`);
-  const body = lines.slice(0, 6).join('\n') + (lines.length > 6 ? `\n+${lines.length - 6} more` : '');
+  const lines = dayLines(today), body = lines.slice(0, 6).join('\n') + (lines.length > 6 ? `\n+${lines.length - 6} more` : '');
   if ('Notification' in window && Notification.permission === 'granted' && navigator.serviceWorker) {
-    navigator.serviceWorker.ready.then(r => r.showNotification('Expiry check before closing', { body, icon: 'icon.svg', tag: 'expiry-digest' }));
-  } else alert('Expiry check before closing\n\n' + body);
+    navigator.serviceWorker.ready.then(r => r.showNotification('Expiring today — check before closing', { body, icon: 'icon.svg', tag: 'expiry-digest' }));
+  }
 }
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && !window.Capacitor) navigator.serviceWorker.register('sw.js').catch(() => {});
 render();
 if (LN()) LN().requestPermissions().then(scheduleReminders); else checkDigest();
 setInterval(() => { if (!LN()) checkDigest(); render(); }, 60000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { if (!LN()) checkDigest(); render(); } });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { if (LN()) scheduleReminders(); else checkDigest(); render(); } });
 </script>
 </body>
 </html>
