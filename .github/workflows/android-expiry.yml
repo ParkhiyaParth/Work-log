@@ -48,7 +48,7 @@ jobs:
           mkdir -p assets
           rsvg-convert -w 1024 -h 1024 icon.svg -o assets/icon-only.png
           npm install --no-save @capacitor/assets
-          npx capacitor-assets generate --android --iconBackgroundColor '#d35400' --iconBackgroundColorDark '#d35400'
+          npx capacitor-assets generate --android --iconBackgroundColor '#17212b' --iconBackgroundColorDark '#17212b'
       - name: Use the fixed signing key and a rising version number
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
