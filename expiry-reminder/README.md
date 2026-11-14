@@ -8,9 +8,13 @@ JSON (`{"name":"..","expiry":"31/12/2026"}`), URLs with `?name=&exp=`, GS1 codes
 `key: value` text, or any text containing a date. If the QR has no expiry date you type it in after scanning.
 Dates are read UK-style (day/month/year).
 
-## Reminders
-At the end of a product's expiry day (time set in Settings, default 20:00) the app reminds you that product expires today. Items you didn't remove stay listed as overdue. Browsers cannot
-wake a closed PWA, so this fires when the app is open or next opened after that time. For true background alerts,
-wrap it with Capacitor + Local Notifications (as the Work Log app does for its APK).
+## Android app
+`.github/workflows/android-expiry.yml` builds `ExpiryReminder.apk` (Capacitor) on every push touching this folder, or via
+Actions > "Build Expiry Reminder APK" > Run workflow, and attaches it to a GitHub release (`expiry-apk-N`).
+Install it on the phone (allow "install unknown apps"), then allow camera and notifications when asked.
+
+In the app, one notification per expiry day is scheduled with Android's alarm system at the end-of-day time from
+Settings (default 20:00) listing the products that expire that day. It fires even when the app is closed, and is
+rescheduled whenever stock changes. In a normal browser (PWA) it only fires while the app is open.
 
 Parser tests: `node test-parser.js`

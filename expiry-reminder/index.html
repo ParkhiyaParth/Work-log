@@ -115,7 +115,34 @@ const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; 
 const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 let items = load(LS.items, []);
 let settings = Object.assign({ time: '20:00', days: 7 }, load(LS.set, {}));
-const persist = () => { save(LS.items, items); save(LS.set, settings); };
+const persist = () => { save(LS.items, items); save(LS.set, settings); scheduleReminders(); };
+
+// ---- Android app: real scheduled notifications, one per expiry day, delivered even when the app is closed
+const LN = () => window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() ? Capacitor.Plugins.LocalNotifications : null;
+async function scheduleReminders() {
+  const ln = LN(); if (!ln) return;
+  try {
+    const p = await ln.checkPermissions();
+    if (p.display !== 'granted') return;
+    const pend = await ln.getPending();
+    if (pend.notifications.length) await ln.cancel({ notifications: pend.notifications.map(n => ({ id: n.id })) });
+    const [h, m] = settings.time.split(':').map(Number), now = Date.now(), byDay = {};
+    active().forEach(i => { (byDay[i.expiry] = byDay[i.expiry] || []).push(i); });
+    const list = [];
+    for (const [day, arr] of Object.entries(byDay)) {
+      const [y, mo, d] = day.split('-').map(Number), at = new Date(y, mo - 1, d, h, m, 0);
+      if (at.getTime() <= now) continue;
+      const lines = arr.map(i => `${i.name} ×${i.qty}`);
+      list.push({
+        id: Math.floor(Date.UTC(y, mo - 1, d) / 864e5),
+        title: 'Expiry check before closing',
+        body: lines.slice(0, 6).join('\n') + (lines.length > 6 ? `\n+${lines.length - 6} more` : '') + '\nexpires today',
+        schedule: { at, allowWhileIdle: true }
+      });
+    }
+    if (list.length) await ln.schedule({ notifications: list });
+  } catch (e) { console.error(e); }
+}
 
 const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const daysLeft = iso => Math.round((Date.parse(iso + 'T00:00:00Z') - Date.parse(todayStr() + 'T00:00:00Z')) / 864e5);
@@ -159,6 +186,7 @@ function render() {
   $('#allSub').textContent = `${active().length} batches in stock`;
   $('#allList').innerHTML = all.length ? all.map(i => row(i)).join('') : '<div class="empty">Nothing here.</div>';
   $('#sTime').value = settings.time;
+  if (LN()) { LN().checkPermissions().then(p => { $('#notifNote').textContent = p.display === 'granted' ? 'Reminders enabled — they arrive even when the app is closed.' : 'Tap the button to allow reminders.'; }); return; }
   $('#notifNote').textContent = !('Notification' in window) ? 'Notifications are not supported in this browser.'
     : Notification.permission === 'granted' ? 'Notifications enabled.' : Notification.permission === 'denied' ? 'Blocked — enable them in browser site settings.' : '';
 }
@@ -199,7 +227,7 @@ $('#form').onsubmit = () => {
 // ---- scanner
 let stream = null, scanning = false, detector = null, jsQRLoaded = null;
 const loadJsQR = () => jsQRLoaded || (jsQRLoaded = new Promise((res, rej) => {
-  const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s);
+  const s = document.createElement('script'); s.src = 'jsQR.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s);
 }));
 async function startScan() {
   $('#scanner').classList.add('on'); $('#scanMsg').textContent = 'Starting camera…';
@@ -208,7 +236,7 @@ async function startScan() {
   } catch (e) { $('#scanMsg').textContent = 'Camera not available — use "Add manually".'; return; }
   const v = $('#video'); v.srcObject = stream; await v.play();
   if ('BarcodeDetector' in window) { try { detector = new BarcodeDetector({ formats: ['qr_code'] }); } catch (e) { detector = null; } }
-  if (!detector) { try { await loadJsQR(); } catch (e) { $('#scanMsg').textContent = 'Scanner library needs internet once — or use "Add manually".'; return; } }
+  if (!detector) { try { await loadJsQR(); } catch (e) { $('#scanMsg').textContent = 'Scanner failed to load — use "Add manually".'; return; } }
   $('#scanMsg').textContent = 'Point at the product QR code';
   scanning = true; loop();
 }
@@ -236,7 +264,12 @@ $('#closeScan').onclick = stopScan;
 $('#manualBtn').onclick = () => { stopScan(); openForm(); };
 
 // ---- settings actions
-$('#sNotif').onclick = async () => { if ('Notification' in window) { await Notification.requestPermission(); render(); } };
+$('#sNotif').onclick = async () => {
+  const ln = LN();
+  if (ln) { await ln.requestPermissions(); scheduleReminders(); }
+  else if ('Notification' in window) await Notification.requestPermission();
+  render();
+};
 $('#exportBtn').onclick = () => {
   const rows = [['name', 'expiry', 'qty', 'batch', 'code', 'removed']].concat(items.map(i => [i.name, i.expiry, i.qty, i.batch || '', i.code || '', i.done || '']));
   const csv = rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
@@ -260,9 +293,10 @@ function checkDigest() {
 }
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
-render(); checkDigest();
-setInterval(() => { checkDigest(); render(); }, 60000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkDigest(); render(); } });
+render();
+if (LN()) LN().requestPermissions().then(scheduleReminders); else checkDigest();
+setInterval(() => { if (!LN()) checkDigest(); render(); }, 60000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { if (!LN()) checkDigest(); render(); } });
 </script>
 </body>
 </html>
