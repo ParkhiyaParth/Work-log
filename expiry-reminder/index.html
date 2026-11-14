@@ -70,6 +70,9 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
 .alert{background:var(--bad);color:#fff;border-radius:12px;padding:10px 12px;margin-top:12px;font-weight:700}
 .add{background:var(--bg);border-radius:16px;padding:4px 14px 16px;margin-top:18px;border:1px solid var(--line)}
 .add h3{margin:12px 0 0;font-size:17px}
+.arow{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:10px}
+.rtop{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.rtop .rn{color:var(--mute);font-size:13px;min-width:44px}
 #scanner{width:100%;height:100%;max-width:none;max-height:none;background:#000;margin:0;overflow:hidden}
 #scanner[open]{display:flex;flex-direction:column}
 #scanner video{flex:1;object-fit:cover;width:100%;min-height:0}
@@ -127,13 +130,12 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
     <div id="pStock"></div>
     <div class="add">
       <h3 id="addTitle">Add stock</h3>
-      <label>Quantity</label>
-      <div class="step"><button type="button" id="qMinus">−</button><input id="pQty" type="number" inputmode="numeric" min="1" value="1"><button type="button" id="qPlus">+</button></div>
-      <label>Expiry date (tap to open calendar)</label>
-      <input id="pDate" type="date">
-      <div class="chips" id="chips"></div>
-      <div class="note" id="pDateTxt"></div>
-      <button class="big" id="pAdd" type="button" style="margin-top:14px">Add stock</button>
+      <div class="note">Units with different expiry dates? Add one line for each date, then save once.</div>
+      <div id="rows"></div>
+      <button class="ghost" id="addRow" type="button" style="width:100%;margin-top:12px">+ Add another expiry date</button>
+      <label>Quick date for the selected line</label>
+      <div class="chips" id="chips" style="margin-top:0"></div>
+      <button class="big" id="pAdd" type="button" style="margin-top:16px">Save stock</button>
     </div>
     <button class="ghost sm" id="pDel" type="button" style="margin-top:16px;color:var(--bad);border-color:var(--bad)">Delete product</button>
   </div>
@@ -322,21 +324,37 @@ function renderStock() {
   }).join('') : '<div class="note">No stock yet. Add some below.</div>';
   box.innerHTML = h;
 }
-function setDateNote() {
-  const v = $('#pDate').value;
-  $('#pDateTxt').textContent = v ? `${fmtLong(v)} · ${rel(daysLeft(v))}` : '';
+// one line per expiry date: quantity + calendar date
+let activeRow = null;
+const rowEls = () => [...document.querySelectorAll('#rows .arow')];
+function rowNote(r) { const v = r.querySelector('.rd').value; r.querySelector('.rnote').textContent = v ? `${fmtLong(v)} · ${rel(daysLeft(v))}` : ''; }
+function renumber() { const rs = rowEls(); rs.forEach((r, i) => { r.querySelector('.rn').textContent = rs.length > 1 ? `Line ${i + 1}` : ''; r.querySelector('.rdel').style.display = rs.length > 1 ? '' : 'none'; }); }
+function mkRow(date = '', qty = 1) {
+  const r = document.createElement('div'); r.className = 'arow';
+  r.innerHTML = `<div class="rtop"><b class="rn"></b><div class="step"><button type="button" class="rminus">−</button><input class="rq" type="number" inputmode="numeric" min="1" value="${qty}"><button type="button" class="rplus">+</button></div><button type="button" class="x rdel" aria-label="Remove this line">✕</button></div>
+    <label style="margin-top:0">Expiry date (tap to open calendar)</label><input class="rd" type="date" value="${date}"><div class="note rnote"></div>`;
+  const q = r.querySelector('.rq'), d = r.querySelector('.rd');
+  r.querySelector('.rminus').onclick = () => { q.value = Math.max(1, (+q.value || 1) - 1); };
+  r.querySelector('.rplus').onclick = () => { q.value = (+q.value || 0) + 1; };
+  r.querySelector('.rdel').onclick = () => { r.remove(); activeRow = rowEls().slice(-1)[0] || null; renumber(); };
+  d.oninput = () => rowNote(r);
+  r.addEventListener('focusin', () => { activeRow = r; });
+  $('#rows').appendChild(r); activeRow = r; renumber(); rowNote(r);
+  return r;
 }
+function resetRows(date = '') { $('#rows').innerHTML = ''; mkRow(date, 1); }
+$('#addRow').onclick = () => { const r = mkRow('', 1); r.scrollIntoView({ block: 'center' }); };
+
 function openProduct(pid, pre = {}) {
   cur = pid || null;
   const p = pid ? prodOf(pid) : null;
   $('#pTitle').textContent = p ? p.name : 'New product';
   $('#pName').value = p ? p.name : (pre.name || '');
   $('#pCode').value = p ? p.barcode || '' : (pre.barcode || '');
-  $('#pQty').value = 1;
-  $('#pDate').value = pre.expiry || '';
+  resetRows(pre.expiry || '');
   $('#addTitle').textContent = p ? 'Add new stock' : 'Add first stock';
   $('#pDel').style.display = p ? '' : 'none';
-  setDateNote(); renderStock();
+  renderStock();
   if (!dlg.open) dlg.showModal();
   dlg.scrollTop = 0;
 }
@@ -353,15 +371,19 @@ function saveProduct(quiet) {
   return true;
 }
 $('#pAdd').onclick = () => {
-  const date = $('#pDate').value, qty = Math.max(1, Math.floor(+$('#pQty').value || 1));
   if (!$('#pName').value.trim()) { toast('Enter the product name'); $('#pName').focus(); return; }
-  if (!date) { toast('Pick the expiry date first'); $('#pDate').focus(); return; }
+  const lines = rowEls().map(r => ({ r, date: r.querySelector('.rd').value, qty: Math.max(1, Math.floor(+r.querySelector('.rq').value || 1)) }));
+  const miss = lines.find(l => !l.date);
+  if (miss) { toast(lines.length > 1 ? 'Pick an expiry date for every line' : 'Pick the expiry date first'); miss.r.querySelector('.rd').focus(); return; }
   if (!saveProduct()) return;
-  const same = batches.find(b => b.pid === cur && b.expiry === date);
-  if (same) same.qty += qty; else batches.push({ id: uid(), pid: cur, qty, expiry: date, added: todayStr() });
+  lines.forEach(({ date, qty }) => {
+    const same = batches.find(b => b.pid === cur && b.expiry === date);
+    if (same) same.qty += qty; else batches.push({ id: uid(), pid: cur, qty, expiry: date, added: todayStr() });
+  });
   persist(); render(); renderStock();
-  toast(`Added ${qty} × ${prodOf(cur).name} · expires ${fmt(date)}`);
-  $('#pDate').value = ''; $('#pQty').value = 1; setDateNote();
+  const total = lines.reduce((t, l) => t + l.qty, 0), nd = new Set(lines.map(l => l.date)).size;
+  toast(`Added ${total} × ${prodOf(cur).name} (${nd} expiry date${nd > 1 ? 's' : ''})`);
+  resetRows('');
 };
 function closeProduct() { if (dlg.open) { saveProduct(true); dlg.close(); } render(); }
 $('#pClose').onclick = closeProduct;
@@ -369,9 +391,6 @@ dlg.addEventListener('cancel', () => { saveProduct(true); });
 dlg.addEventListener('close', () => { document.body.appendChild($('#toast')); render(); });
 $('#pName').onchange = () => saveProduct(true);
 $('#pCode').onchange = () => saveProduct(true);
-$('#qMinus').onclick = () => { $('#pQty').value = Math.max(1, (+$('#pQty').value || 1) - 1); };
-$('#qPlus').onclick = () => { $('#pQty').value = (+$('#pQty').value || 0) + 1; };
-$('#pDate').oninput = setDateNote;
 $('#pDel').onclick = e => arm(e.currentTarget, 'Delete product', () => {
   batches = batches.filter(b => b.pid !== cur); products = products.filter(p => p.id !== cur); cur = null; persist(); dlg.close(); render(); toast('Product deleted');
 });
@@ -381,7 +400,8 @@ $('#newBtn').onclick = () => openProduct(null);
   const b = document.createElement('button'); b.type = 'button'; b.className = 'ghost'; b.textContent = '+' + t;
   b.onclick = () => {
     const d = new Date(); if (typeof v === 'number') d.setDate(d.getDate() + v); else d.setMonth(d.getMonth() + +v.slice(1));
-    $('#pDate').value = ymd(d); setDateNote();
+    const r = activeRow && activeRow.isConnected ? activeRow : rowEls().slice(-1)[0];
+    if (r) { r.querySelector('.rd').value = ymd(d); rowNote(r); }
   };
   $('#chips').appendChild(b);
 });
@@ -471,7 +491,7 @@ $('#pScan').onclick = () => startScan(t => {
   const s = interpret(t);
   $('#pCode').value = s.code;
   if (s.name && !$('#pName').value) $('#pName').value = s.name;
-  if (s.expiry) { $('#pDate').value = s.expiry; setDateNote(); }
+  if (s.expiry) { const r = rowEls()[0]; if (r) { r.querySelector('.rd').value = s.expiry; rowNote(r); } }
   const other = s.code && products.find(x => norm(x.barcode) === norm(s.code) && x.id !== cur);
   if (other) { toast(`Barcode already belongs to "${other.name}" — opening it`); openProduct(other.id, { expiry: s.expiry }); return; }
   saveProduct(true);
