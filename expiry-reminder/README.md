@@ -9,7 +9,7 @@ JSON (`{"name":"..","expiry":"31/12/2026"}`), URLs with `?name=&exp=`, GS1 codes
 Dates are read UK-style (day/month/year).
 
 ## Reminders
-At the time set in Settings (default 20:00) the app shows/notifies what is expired or expiring today. Browsers cannot
+At the end of a product's expiry day (time set in Settings, default 20:00) the app reminds you that product expires today. Items you didn't remove stay listed as overdue. Browsers cannot
 wake a closed PWA, so this fires when the app is open or next opened after that time. For true background alerts,
 wrap it with Capacitor + Local Notifications (as the Work Log app does for its APK).
 

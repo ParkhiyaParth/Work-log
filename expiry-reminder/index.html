@@ -70,8 +70,6 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
     <div class="card">
       <label>End-of-day reminder time</label>
       <input type="time" id="sTime">
-      <label>Also warn about items expiring within (days)</label>
-      <input type="number" id="sDays" min="0" max="365">
       <button id="sNotif" class="ghost" style="margin-top:14px;width:100%">Enable phone notifications</button>
       <div class="note" id="notifNote"></div>
     </div>
@@ -129,8 +127,7 @@ function pill(i) {
   const d = daysLeft(i.expiry);
   if (d < 0) return `<span class="pill bad">Expired ${-d}d ago</span>`;
   if (d === 0) return `<span class="pill bad">Today</span>`;
-  if (d <= settings.days) return `<span class="pill warn">${d} day${d > 1 ? 's' : ''}</span>`;
-  return `<span class="pill ok">${d} days</span>`;
+  return `<span class="pill ${d <= 7 ? 'warn' : 'ok'}">${d} day${d > 1 ? 's' : ''}</span>`;
 }
 function row(i, actions = true) {
   return `<div class="item"><div class="nm"><b>${esc(i.name)} ×${i.qty}</b><span class="sub">${fmt(i.expiry)}${i.batch ? ' · batch ' + esc(i.batch) : ''}</span></div>${pill(i)}
@@ -142,19 +139,18 @@ function dueLists() {
   const a = active().sort((x, y) => x.expiry.localeCompare(y.expiry));
   return {
     expired: a.filter(i => daysLeft(i.expiry) < 0),
-    today: a.filter(i => daysLeft(i.expiry) === 0),
-    soon: a.filter(i => { const d = daysLeft(i.expiry); return d > 0 && d <= settings.days; })
+    today: a.filter(i => daysLeft(i.expiry) === 0)
   };
 }
 
 function render() {
-  const { expired, today, soon } = dueLists();
+  const { expired, today } = dueLists();
   $('#todaySub').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) + ` · reminder at ${settings.time}`;
   const n = expired.length + today.length;
   let h = '';
-  if (n) h += `<div class="banner"><b>${n} product${n > 1 ? 's need' : ' needs'} attention</b><br>${expired.length} expired · ${today.length} expiring today — pull from shelf before closing.</div>`;
+  if (n) h += `<div class="banner"><b>${n} product${n > 1 ? 's need' : ' needs'} attention</b><br>${today.length} expiring today${expired.length ? ' · ' + expired.length + ' overdue' : ''} — pull from shelf before closing.</div>`;
   else if (active().length) h += `<div class="card">✅ Nothing expired or expiring today.</div>`;
-  h += section('Expired', expired) + section('Expires today', today) + section(`Within ${settings.days} days`, soon);
+  h += section('Expires today', today) + section('Overdue — still in stock', expired);
   if (!active().length) h += `<div class="empty">No stock yet.<br>Tap the scan button to add your first product.</div>`;
   $('#digest').innerHTML = h;
 
@@ -162,7 +158,7 @@ function render() {
   const all = active().filter(i => !q || i.name.toLowerCase().includes(q)).sort((x, y) => x.expiry.localeCompare(y.expiry));
   $('#allSub').textContent = `${active().length} batches in stock`;
   $('#allList').innerHTML = all.length ? all.map(i => row(i)).join('') : '<div class="empty">Nothing here.</div>';
-  $('#sTime').value = settings.time; $('#sDays').value = settings.days;
+  $('#sTime').value = settings.time;
   $('#notifNote').textContent = !('Notification' in window) ? 'Notifications are not supported in this browser.'
     : Notification.permission === 'granted' ? 'Notifications enabled.' : Notification.permission === 'denied' ? 'Blocked — enable them in browser site settings.' : '';
 }
@@ -181,7 +177,6 @@ document.querySelectorAll('nav button[data-v]').forEach(b => b.onclick = () => {
 });
 $('#q').oninput = render;
 $('#sTime').onchange = e => { settings.time = e.target.value || '20:00'; persist(); render(); };
-$('#sDays').onchange = e => { settings.days = Math.max(0, +e.target.value || 0); persist(); render(); };
 
 // ---- add / edit dialog
 const dlg = $('#dlg');
@@ -254,10 +249,10 @@ function checkDigest() {
   const now = new Date(), [h, m] = settings.time.split(':').map(Number);
   if (now.getHours() * 60 + now.getMinutes() < h * 60 + m) return;
   if (load(LS.shown, '') === todayStr()) return;
-  const { expired, today } = dueLists();
+  const { today } = dueLists();
   save(LS.shown, todayStr());
-  if (!expired.length && !today.length) return;
-  const lines = [...expired.map(i => `EXPIRED: ${i.name} ×${i.qty}`), ...today.map(i => `Today: ${i.name} ×${i.qty}`)];
+  if (!today.length) return;
+  const lines = today.map(i => `${i.name} ×${i.qty} expires today`);
   const body = lines.slice(0, 6).join('\n') + (lines.length > 6 ? `\n+${lines.length - 6} more` : '');
   if ('Notification' in window && Notification.permission === 'granted' && navigator.serviceWorker) {
     navigator.serviceWorker.ready.then(r => r.showNotification('Expiry check before closing', { body, icon: 'icon.svg', tag: 'expiry-digest' }));
