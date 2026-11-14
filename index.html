@@ -89,6 +89,18 @@ h1{font-size:26px;margin:4px 0 2px}
 .field label{font-weight:600}
 input[type=number],input[type=text]{background:var(--line);border:0;border-radius:12px;padding:10px 12px;font-size:16px;color:var(--ink);width:110px;text-align:right;font-weight:600}
 .earn{text-align:center;color:var(--ok);font-weight:700;font-size:20px;margin-top:6px}
+/* jobs */
+.jobs{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;margin-top:2px;scrollbar-width:none}
+.jobs::-webkit-scrollbar{display:none}
+.jchip{flex:none;border:0;border-radius:20px;padding:8px 14px;font-weight:700;font-size:14px;background:var(--card);color:var(--ink);box-shadow:var(--shadow);display:flex;gap:7px;align-items:center;font-family:inherit}
+.jchip.on{background:var(--pri);color:#fff}
+.jchip.add{background:transparent;box-shadow:none;border:1.5px dashed var(--mute);color:var(--mute)}
+.jchip:active{transform:scale(.94)}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
+.dots{display:inline-flex;gap:3px;margin-left:6px;vertical-align:middle}
+.colors{display:flex;gap:8px}
+.cdot{width:28px;height:28px;border-radius:50%;border:3px solid transparent;padding:0}
+.cdot.on{border-color:var(--ink)}
 /* calendar */
 .cal{display:grid;grid-template-columns:repeat(7,1fr) 58px;gap:5px;margin-top:10px}
 .ch{font-size:11px;color:var(--mute);text-align:center;font-weight:700;letter-spacing:.4px}
@@ -135,6 +147,7 @@ input[type=number],input[type=text]{background:var(--line);border:0;border-radiu
 <body>
 <div id="app">
   <main>
+    <div class="jobs" id="jobbar"></div>
     <!-- WEEK -->
     <section class="view on" id="v-week">
       <div class="nav">
@@ -149,6 +162,7 @@ input[type=number],input[type=text]{background:var(--line);border:0;border-radiu
         <div class="row"><div><b id="wHours">0h</b>worked</div><div><b id="wDays">0</b>days</div><div><b id="wPlan">0h</b>planned</div></div>
         <div class="bar"><i id="wBar"></i></div>
       </div>
+      <div id="jobBreak"></div>
       <button class="btn" id="paidBtn" onclick="togglePaid(key(weekStart))"></button>
       <div id="days"></div>
       <button class="btn ghost" onclick="fillPlan()">✨ Fill empty days from my weekly plan</button>
@@ -185,13 +199,18 @@ input[type=number],input[type=text]{background:var(--line);border:0;border-radiu
     <!-- SETTINGS -->
     <section class="view" id="v-set">
       <h1>Settings</h1>
-      <div class="sub">Pay rate & your usual week</div>
+      <div class="sub">Jobs, pay rates &amp; your usual week</div>
       <div class="card">
-        <div class="field" style="margin:0"><label>Pay rate / hour</label><input type="number" id="rate" inputmode="decimal" min="0" step="0.5"></div>
-        <div class="field"><label>Currency symbol</label><input type="text" id="cur" maxlength="3"></div>
-        <div class="sub" style="margin-top:8px">Changing the rate only affects days you log from now on — past days keep the rate they were saved with.</div>
+        <b>Jobs</b><div class="sub">Do two jobs? Add each one and track them separately.</div>
+        <div class="jobs" id="setJobs" style="margin-top:10px"></div>
+        <div class="field"><label>Job name</label><input type="text" id="jname" maxlength="20" style="width:160px"></div>
+        <div class="field"><label>Pay rate / hour</label><input type="number" id="rate" inputmode="decimal" min="0" step="0.5"></div>
+        <div class="field"><label>Colour</label><div class="colors" id="colors"></div></div>
+        <div class="sub" style="margin-top:8px">Changing the rate only affects days you log from now on. Past days keep the rate they were saved with.</div>
+        <button class="btn bad" id="delJob" onclick="delJob()">Delete this job</button>
       </div>
-      <div class="card"><b>Weekly plan (hours per day)</b><div class="sub">e.g. 5 hours on every weekday</div><div id="plan"></div></div>
+      <div class="card"><b>Weekly plan for <span id="planName"></span></b><div class="sub">Usual hours per day, e.g. 5 hours on every weekday</div><div id="plan"></div></div>
+      <div class="card"><div class="field" style="margin:0"><label>Currency symbol</label><input type="text" id="cur" maxlength="3"></div></div>
       <div class="card">
         <button class="btn ghost" style="margin:0" onclick="exportData()">⬇️ Export backup</button>
         <button class="btn ghost" onclick="document.getElementById('imp').click()">⬆️ Import backup</button>
@@ -212,6 +231,7 @@ input[type=number],input[type=text]{background:var(--line);border:0;border-radiu
   <div class="sheet" id="sheet">
     <div class="grab"></div>
     <div style="text-align:center"><b id="sTitle" style="font-size:18px"></b></div>
+    <div class="chips" id="sJobs" style="margin-top:10px"></div>
     <div class="stepper">
       <button onclick="bump(-.5)">−</button>
       <div class="v"><span id="sVal">0</span><small> h</small></div>
@@ -229,13 +249,27 @@ input[type=number],input[type=text]{background:var(--line);border:0;border-radiu
 <script>
 const KEY='worklog.v1';
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-const def={rate:15,cur:'£',plan:[5,5,5,5,5,0,0],entries:{},dismissed:{},paid:{}};
-let S;
-try{S=Object.assign({},def,JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){S={...def}}
-if(!S.cur||S.cur==='$')S.cur='£';if(!S.paid)S.paid={};
+const COLORS=['#6c5ce7','#00b894','#e17055','#0984e3','#e84393','#fdcb6e'];
+const defState=()=>({cur:'£',jobs:[{id:'j1',name:'My job',rate:15,color:COLORS[0],plan:[5,5,5,5,5,0,0]}],view:'j1',entries:{},dismissed:{},paid:{}});
+/* Accepts data from any earlier version (single job) and returns the multi-job shape. */
+function migrate(raw){
+  raw=raw&&typeof raw==='object'?raw:{};
+  const s=Object.assign(defState(),raw);
+  if(!Array.isArray(raw.jobs)||!raw.jobs.length)s.jobs=[{id:'j1',name:'My job',rate:+raw.rate||15,color:COLORS[0],plan:Array.isArray(raw.plan)?raw.plan:[5,5,5,5,5,0,0]}];
+  delete s.rate;delete s.plan;
+  s.jobs.forEach((j,i)=>{if(!Array.isArray(j.plan)||j.plan.length!==7)j.plan=[0,0,0,0,0,0,0];if(!j.color)j.color=COLORS[i%COLORS.length];if(!j.name)j.name='Job '+(i+1)});
+  const first=s.jobs[0].id;
+  Object.keys(s.entries).forEach(k=>{const e=s.entries[k];if(e&&typeof e.h==='number')s.entries[k]={[first]:{h:e.h,rate:e.rate}}});
+  Object.keys(s.paid).forEach(k=>{if(!k.includes('|')){s.paid[k+'|'+first]=s.paid[k];delete s.paid[k]}});
+  if(!s.cur||s.cur==='$')s.cur='£';
+  if(s.view!=='all'&&!s.jobs.some(j=>j.id===s.view))s.view=s.jobs.length>1?'all':first;
+  return s;
+}
+let S;try{S=migrate(JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){S=migrate({})}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 const $=id=>document.getElementById(id);
 const vib=n=>{try{navigator.vibrate&&navigator.vibrate(n)}catch(e){}};
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 const pad=n=>String(n).padStart(2,'0');
 const key=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -244,45 +278,99 @@ const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
 const money=n=>S.cur+(Math.round(n*100)/100).toLocaleString('en-GB',{minimumFractionDigits:n%1?2:0,maximumFractionDigits:2});
 const hrs=h=>(Math.round(h*10)/10)+'h';
 const fmt=(d,o)=>d.toLocaleDateString(undefined,o);
-const earned=e=>e?e.h*e.rate:0;
+const sum=a=>a.reduce((x,y)=>x+y,0);
+const hexA=(hex,a)=>{const n=parseInt(hex.slice(1),16);return `rgba(${n>>16},${n>>8&255},${n&255},${a})`};
 
+/* jobs & totals (everything respects the job switcher: one job or all) */
+const jobById=id=>S.jobs.find(j=>j.id===id);
+const act=()=>S.view==='all'?S.jobs:S.jobs.filter(j=>j.id===S.view);
+const viewColor=()=>S.view==='all'?COLORS[0]:(jobById(S.view)||S.jobs[0]).color;
+function dayTot(k,jobs=act()){
+  let h=0,p=0;const list=[],E=S.entries[k]||{};
+  jobs.forEach(j=>{const e=E[j.id];if(e&&e.h>0){h+=e.h;p+=e.h*e.rate;list.push({j,e})}});
+  return{h,p,list};
+}
+function weekTotals(start,jobs=act()){
+  let h=0,p=0,d=0;
+  for(let i=0;i<7;i++){const t=dayTot(key(addDays(start,i)),jobs);if(t.h>0){h+=t.h;p+=t.p;d++}}
+  return{h,p,d};
+}
+function setEntry(k,jid,val){
+  if(val){(S.entries[k]=S.entries[k]||{})[jid]=val}
+  else if(S.entries[k]){delete S.entries[k][jid];if(!Object.keys(S.entries[k]).length)delete S.entries[k]}
+}
+/* payment state of one week, across the jobs currently shown that earned something */
+function paidState(wk){
+  const st=new Date(wk+'T00:00'),js=act().filter(j=>weekTotals(st,[j]).p>0),pd=js.filter(j=>S.paid[wk+'|'+j.id]);
+  return{n:js.length,paid:pd.length,all:js.length>0&&pd.length===js.length,any:pd.length>0,js,date:pd.map(j=>S.paid[wk+'|'+j.id]).sort().pop()};
+}
+function togglePaid(wk){
+  const s=paidState(wk);if(!s.n)return;
+  if(s.all){s.js.forEach(j=>delete S.paid[wk+'|'+j.id]);toast('Marked as not paid')}
+  else{s.js.forEach(j=>{if(!S.paid[wk+'|'+j.id])S.paid[wk+'|'+j.id]=key(new Date())});toast('Payment received ✓')}
+  save();vib(20);renderAll();
+}
+function togglePaidJob(wk,jid){
+  const k=wk+'|'+jid;if(S.paid[k]){delete S.paid[k];toast('Marked as not paid')}else{S.paid[k]=key(new Date());toast('Payment received ✓')}
+  save();vib(20);renderAll();
+}
+
+let tab='week',editJob=S.jobs[0].id;
 let weekStart=mondayOf(new Date());
 let month=new Date(new Date().getFullYear(),new Date().getMonth(),1);
+let calStart=addDays(mondayOf(new Date()),-21);
+let selDay=null;
 
 function toast(t){const el=$('toast');el.textContent=t;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('on'),1800)}
-
 function countUp(el,to,format){
   const from=+el.dataset.v||0;el.dataset.v=to;
   const t0=performance.now(),D=700;
   (function f(t){const p=Math.min(1,(t-t0)/D),e=1-Math.pow(1-p,3);el.textContent=format(from+(to-from)*e);if(p<1)requestAnimationFrame(f)})(t0);
 }
 
-function weekTotals(start){
-  let h=0,p=0,d=0;
-  for(let i=0;i<7;i++){const e=S.entries[key(addDays(start,i))];if(e&&e.h>0){h+=e.h;p+=earned(e);d++}}
-  return{h,p,d};
+/* JOB SWITCHER */
+function renderBar(){
+  const b=$('jobbar');b.style.display=tab==='set'?'none':'flex';
+  let h='';
+  if(S.jobs.length>1)h+=`<button class="jchip ${S.view==='all'?'on':''}" onclick="setView('all')">All jobs</button>`;
+  h+=S.jobs.map(j=>`<button class="jchip ${S.view===j.id?'on':''}" onclick="setView('${j.id}')"><span class="dot" style="background:${j.color}"></span>${esc(j.name)}</button>`).join('');
+  h+=`<button class="jchip add" onclick="addJob()">+ ${S.jobs.length>1?'Job':'Add second job'}</button>`;
+  b.innerHTML=h;
 }
+function setView(id){S.view=id;save();vib(8);renderAll()}
+function addJob(){
+  const id='j'+Date.now().toString(36),n=S.jobs.length+1;
+  S.jobs.push({id,name:'Job '+n,rate:S.jobs[0].rate,color:COLORS[(n-1)%COLORS.length],plan:[0,0,0,0,0,0,0]});
+  S.view=id;editJob=id;save();vib(15);showTab('set');toast('Job added. Name it and set its pay rate');
+}
+function showTab(t){document.querySelector(`.tabs button[data-t=${t}]`).click()}
 
 /* WEEK */
 function renderWeek(){
-  const end=addDays(weekStart,6),isThis=key(weekStart)===key(mondayOf(new Date()));
-  $('wTitle').textContent=isThis?'This week':(key(addDays(mondayOf(new Date()),-7))===key(weekStart)?'Last week':'Week');
+  const end=addDays(weekStart,6),isThis=key(weekStart)===key(mondayOf(new Date())),wk=key(weekStart);
+  $('wTitle').textContent=isThis?'This week':(key(addDays(mondayOf(new Date()),-7))===wk?'Last week':'Week');
   $('wRange').textContent=fmt(weekStart,{month:'short',day:'numeric'})+' – '+fmt(end,{month:'short',day:'numeric'});
-  const t=weekTotals(weekStart),planH=S.plan.reduce((a,b)=>a+b,0);
+  const t=weekTotals(weekStart),planH=sum(act().map(j=>sum(j.plan)));
   countUp($('wPay'),t.p,money);
   $('wHours').textContent=hrs(t.h);$('wDays').textContent=t.d;$('wPlan').textContent=hrs(planH);
-  const pb=$('paidBtn'),pd=S.paid[key(weekStart)];pb.style.display=t.p>0?'block':'none';
-  pb.className='btn'+(pd?' okb':'');pb.textContent=pd?'✓ Payment received · '+fmt(new Date(pd+'T00:00'),{day:'numeric',month:'short'})+' (tap to undo)':'Mark this week\'s payment as received';
+  const ps=paidState(wk),pb=$('paidBtn');pb.style.display=ps.n?'block':'none';
+  pb.className='btn'+(ps.all?' okb':'');
+  pb.textContent=ps.all?'✓ Payment received · '+fmt(new Date(ps.date+'T00:00'),{day:'numeric',month:'short'})+' (tap to undo)':
+    ps.any?'Mark remaining payments as received':(ps.n>1?'Mark all payments as received':'Mark this week\'s payment as received');
+  // per-job split when viewing all jobs
+  $('jobBreak').innerHTML=(S.view==='all'&&S.jobs.length>1&&t.p>0)?'<div class="card" style="margin-top:10px;padding:6px 16px">'+S.jobs.map(j=>{
+    const jt=weekTotals(weekStart,[j]);if(!jt.p)return '';const pd=S.paid[wk+'|'+j.id];
+    return `<div class="wk"><div class="l"><span class="dot" style="background:${j.color}"></span> <b>${esc(j.name)}</b><br><small>${hrs(jt.h)} · ${jt.d} days</small></div><div style="text-align:right"><b class="p">${money(jt.p)}</b><br><button class="pchk ${pd?'paid':''}" onclick="togglePaidJob('${wk}','${j.id}')"><span class="tick">✓</span>${pd?'Paid':'Not paid'}</button></div></div>`}).join('')+'</div>':'';
   setTimeout(()=>$('wBar').style.width=Math.min(100,planH?t.h/planH*100:(t.h?100:0))+'%',30);
   const today=key(new Date());
   $('days').innerHTML=DAYS.map((n,i)=>{
-    const d=addDays(weekStart,i),k=key(d),e=S.entries[k],h=e?e.h:0,max=Math.max(8,S.plan[i]);
+    const d=addDays(weekStart,i),k=key(d),dt=dayTot(k),h=dt.h,planD=sum(act().map(j=>j.plan[i])),max=Math.max(8,planD);
+    const dots=S.jobs.length>1&&S.view==='all'?`<span class="dots">${dt.list.map(x=>`<span class="dot" style="background:${x.j.color}"></span>`).join('')}</span>`:'';
     return `<div class="day ${k===today?'today':''} ${k===selDay?'sel':''} ${h?'':'empty'}" id="d-${k}" onclick="openSheet('${k}')">
       <div class="dn"><b>${n}</b><span>${d.getDate()}</span></div>
-      <div class="dbar"><div class="track"><i style="width:${Math.min(100,h/max*100)}%"></i></div><small>${S.plan[i]?'plan '+hrs(S.plan[i]):'day off'}</small></div>
-      <div class="dh"><b>${h?hrs(h):'+ add'}</b>${h?`<small>${money(earned(e))}</small>`:''}</div></div>`}).join('');
+      <div class="dbar"><div class="track"><i style="width:${Math.min(100,h/max*100)}%;${S.view!=='all'?`background:${viewColor()}`:''}"></i></div><small>${planD?'plan '+hrs(planD):'day off'}</small></div>
+      <div class="dh"><b>${h?hrs(h):'+ add'}${dots}</b>${h?`<small>${money(dt.p)}</small>`:''}</div></div>`}).join('');
   if(selDay){const el=$('d-'+selDay);if(el)setTimeout(()=>{const mn=document.querySelector('main');mn.scrollTo({top:mn.scrollTop+el.getBoundingClientRect().top-mn.getBoundingClientRect().top-mn.clientHeight/2+el.offsetHeight/2,behavior:'smooth'})},60);setTimeout(()=>{selDay=null},2500)}
-  // end-of-week banner: last completed week not yet dismissed
   const last=addDays(mondayOf(new Date()),-7),lk=key(last),lt=weekTotals(last);
   $('banner').innerHTML=(isThis&&lt.h>0&&!S.dismissed[lk])?
     `<div class="banner"><div class="e">🎉</div><div><div style="font-size:13px;opacity:.9">Last week's payout</div><b>${money(lt.p)}</b> · ${hrs(lt.h)}</div><button onclick="dismiss('${lk}')">✕</button></div>`:'';
@@ -291,32 +379,41 @@ function dismiss(k){S.dismissed[k]=1;save();renderWeek()}
 function shiftWeek(n){weekStart=addDays(weekStart,7*n);vib(8);renderWeek()}
 function fillPlan(){
   let n=0;
-  for(let i=0;i<7;i++){const k=key(addDays(weekStart,i));if(!S.entries[k]&&S.plan[i]>0){S.entries[k]={h:S.plan[i],rate:S.rate};n++}}
-  save();renderWeek();vib(20);toast(n?`Filled ${n} day${n>1?'s':''} ✨`:'Nothing to fill');
+  act().forEach(j=>{for(let i=0;i<7;i++){const k=key(addDays(weekStart,i));if(!(S.entries[k]&&S.entries[k][j.id])&&j.plan[i]>0){setEntry(k,j.id,{h:j.plan[i],rate:j.rate});n++}}});
+  save();renderAll();vib(20);toast(n?`Filled ${n} day${n>1?'s':''} ✨`:'Nothing to fill');
 }
 
-/* SHEET */
-let cur=null,curH=0;
+/* DAY SHEET (one stepper per job, pick the job with the chips) */
+let cur=null,curJob=null,curH=0,drafts={};
 function openSheet(k){
-  cur=k;const d=new Date(k+'T00:00'),e=S.entries[k],i=(d.getDay()+6)%7;
-  curH=e?e.h:S.plan[i]||0;
+  cur=k;const d=new Date(k+'T00:00'),i=(d.getDay()+6)%7,E=S.entries[k]||{};
+  drafts={};S.jobs.forEach(j=>{const e=E[j.id];drafts[j.id]={h:e?e.h:(j.plan[i]||0),rate:e?e.rate:j.rate,existed:!!e,touched:false}});
+  curJob=S.view!=='all'?S.view:(S.jobs.find(j=>E[j.id])||S.jobs[0]).id;
   $('sTitle').textContent=fmt(d,{weekday:'long',month:'short',day:'numeric'});
-  $('sRate').value=e?e.rate:S.rate;
-  const opts=[...new Set([S.plan[i],2,4,6,8].filter(x=>x>0))].sort((a,b)=>a-b);
+  loadJob();$('scrim').classList.add('on');$('sheet').classList.add('on');
+}
+function loadJob(){
+  const j=jobById(curJob),dr=drafts[curJob],i=(new Date(cur+'T00:00').getDay()+6)%7;
+  curH=dr.h;$('sRate').value=dr.rate;
+  $('sJobs').innerHTML=S.jobs.length>1?S.jobs.map(x=>`<button class="jchip ${x.id===curJob?'on':''}" onclick="switchJob('${x.id}')"><span class="dot" style="background:${x.color}"></span>${esc(x.name)}${(drafts[x.id].existed||drafts[x.id].touched)&&drafts[x.id].h>0?' · '+hrs(drafts[x.id].h):''}</button>`).join(''):'';
+  const opts=[...new Set([j.plan[i],2,4,6,8].filter(x=>x>0))].sort((a,b)=>a-b);
   $('chips').innerHTML=opts.map(x=>`<button class="chip" onclick="setH(${x})">${x}h</button>`).join('');
-  $('sClear').style.display=e?'block':'none';
-  updSheet();$('scrim').classList.add('on');$('sheet').classList.add('on');
+  $('sClear').style.display=dr.existed?'block':'none';
+  $('sClear').textContent=S.jobs.length>1?'Clear hours for '+j.name:'Clear this day';
+  updSheet();
 }
+function switchJob(id){updSheet();curJob=id;vib(6);loadJob()}
 function closeSheet(){$('scrim').classList.remove('on');$('sheet').classList.remove('on')}
-function updSheet(){$('sVal').textContent=curH;$('sEarn').textContent='= '+money(curH*(+$('sRate').value||0))}
-function bump(n){curH=Math.max(0,Math.min(24,curH+n));vib(6);updSheet()}
-function setH(x){curH=x;vib(6);updSheet()}
-function sheetRate(){updSheet()}
+function updSheet(){const dr=drafts[curJob];dr.h=curH;dr.rate=+$('sRate').value||0;$('sVal').textContent=curH;$('sEarn').textContent='= '+money(curH*dr.rate)}
+function bump(n){curH=Math.max(0,Math.min(24,curH+n));drafts[curJob].touched=true;vib(6);updSheet()}
+function setH(x){curH=x;drafts[curJob].touched=true;vib(6);updSheet()}
+function sheetRate(){drafts[curJob].touched=true;updSheet()}
 function saveDay(){
-  if(curH>0)S.entries[cur]={h:curH,rate:+$('sRate').value||0};else delete S.entries[cur];
-  save();closeSheet();renderAll();vib(25);toast(curH>0?'Saved ✓':'Cleared');
+  drafts[curJob].touched=true;updSheet();
+  S.jobs.forEach(j=>{const dr=drafts[j.id];if(dr.touched)setEntry(cur,j.id,dr.h>0?{h:dr.h,rate:dr.rate}:null)});
+  save();closeSheet();renderAll();vib(25);toast('Saved ✓');
 }
-function clearDay(){delete S.entries[cur];save();closeSheet();renderAll();toast('Cleared')}
+function clearDay(){setEntry(cur,curJob,null);save();closeSheet();renderAll();toast('Cleared')}
 
 /* MONTH */
 function renderMonth(){
@@ -324,36 +421,35 @@ function renderMonth(){
   const y=month.getFullYear(),m=month.getMonth(),last=new Date(y,m+1,0).getDate();
   const weeks={};let H=0,P=0,D=0;
   for(let d=1;d<=last;d++){
-    const dt=new Date(y,m,d),e=S.entries[key(dt)];if(!e||!e.h)continue;
+    const dt=new Date(y,m,d),t=dayTot(key(dt));if(!t.h)continue;
     const wk=key(mondayOf(dt));(weeks[wk]=weeks[wk]||{h:0,p:0,d:0});
-    weeks[wk].h+=e.h;weeks[wk].p+=earned(e);weeks[wk].d++;H+=e.h;P+=earned(e);D++;
+    weeks[wk].h+=t.h;weeks[wk].p+=t.p;weeks[wk].d++;H+=t.h;P+=t.p;D++;
   }
   countUp($('mPay'),P,money);$('mHours').textContent=hrs(H);$('mDays').textContent=D;$('mAvg').textContent=H?money(P/H):money(0);
-  // all weeks touching the month
   const list=[];let w=mondayOf(new Date(y,m,1));
   while(w<=new Date(y,m,last)){list.push(w);w=addDays(w,7)}
   const maxP=Math.max(1,...list.map(x=>(weeks[key(x)]||{p:0}).p));
   $('chart').innerHTML=list.map((x,i)=>{const t=weeks[key(x)]||{p:0};return `<div><em>${t.p?money(t.p):''}</em><i data-h="${t.p/maxP*100}"></i><span>W${i+1}</span></div>`}).join('');
   requestAnimationFrame(()=>setTimeout(()=>document.querySelectorAll('#chart i').forEach(i=>i.style.height=i.dataset.h+'%'),30));
+  const perJob=S.view==='all'&&S.jobs.length>1?'<div class="wk"><div class="l"><b>By job</b></div></div>'+S.jobs.map(j=>{let jh=0,jp=0;for(let d=1;d<=last;d++){const t=dayTot(key(new Date(y,m,d)),[j]);jh+=t.h;jp+=t.p}return jp?`<div class="wk"><div class="l"><span class="dot" style="background:${j.color}"></span> <b>${esc(j.name)}</b><br><small>${hrs(jh)}</small></div><b class="p">${money(jp)}</b></div>`:''}).join(''):'';
   $('mWeeks').innerHTML=list.map((x,i)=>{
-    const t=weeks[key(x)]||{h:0,p:0,d:0},e=addDays(x,6);
-    return `<div class="wk"><div class="l"><b>Week ${i+1}</b><br><small>${fmt(x,{month:'short',day:'numeric'})} – ${fmt(e,{month:'short',day:'numeric'})} · ${hrs(t.h)} · ${t.d} days</small></div><div style="text-align:right"><b class="p">${money(t.p)}</b>${t.p?`<br><button class="pchk ${S.paid[key(x)]?'paid':''}" onclick="togglePaid('${key(x)}')"><span class="tick">✓</span>${S.paid[key(x)]?'Paid':'Not paid'}</button>`:''}</div></div>`}).join('')
-    +`<div class="wk"><div class="l"><b>Month total</b></div><b class="p" style="color:var(--pri)">${money(P)}</b></div>`;
+    const t=weeks[key(x)]||{h:0,p:0,d:0},e=addDays(x,6),ps=paidState(key(x));
+    return `<div class="wk"><div class="l"><b>Week ${i+1}</b><br><small>${fmt(x,{month:'short',day:'numeric'})} – ${fmt(e,{month:'short',day:'numeric'})} · ${hrs(t.h)} · ${t.d} days</small></div><div style="text-align:right"><b class="p">${money(t.p)}</b>${ps.n?`<br><button class="pchk ${ps.all?'paid':''}" onclick="togglePaid('${key(x)}')"><span class="tick">✓</span>${ps.all?'Paid':(ps.any?'Part paid':'Not paid')}</button>`:''}</div></div>`}).join('')
+    +`<div class="wk"><div class="l"><b>Month total</b></div><b class="p" style="color:var(--pri)">${money(P)}</b></div>`+perJob;
 }
-let calStart=addDays(mondayOf(new Date()),-21);
 function renderCal(){
-  const m=month.getMonth(),today=key(new Date());
+  const m=month.getMonth(),today=key(new Date()),col=viewColor();
   $('calRange').textContent=fmt(calStart,{day:'numeric',month:'short'})+' – '+fmt(addDays(calStart,27),{day:'numeric',month:'short',year:'numeric'});
   let h='<div class="ch">M</div><div class="ch">T</div><div class="ch">W</div><div class="ch">T</div><div class="ch">F</div><div class="ch">S</div><div class="ch">S</div><div class="ch">Paid</div>';
   for(let r=0;r<4;r++){
     const w=addDays(calStart,7*r);
     for(let i=0;i<7;i++){
-      const d=addDays(w,i),k=key(d),e=S.entries[k],a=e&&e.h?.25+.65*Math.min(1,e.h/8):0;
+      const d=addDays(w,i),k=key(d),t=dayTot(k),a=t.h?.25+.65*Math.min(1,t.h/8):0;
       const first=d.getDate()===1?`<i style="font-style:normal;font-size:9px;color:var(--pri)">${fmt(d,{month:'short'})}</i>`:'';
-      h+=`<button class="cd ${d.getMonth()!==m?'out':''} ${k===today?'today':''}" ${a?`style="background:rgba(108,92,231,${a});color:${a>.55?'#fff':'inherit'}"`:''} onclick="gotoDate('${k}')">${first}${d.getDate()}${e&&e.h?`<small>${hrs(e.h)}</small>`:''}</button>`;
+      h+=`<button class="cd ${d.getMonth()!==m?'out':''} ${k===today?'today':''}" ${a?`style="background:${hexA(col,a)};color:${a>.55?'#fff':'inherit'}"`:''} onclick="gotoDate('${k}')">${first}${d.getDate()}${t.h?`<small>${hrs(t.h)}</small>`:''}</button>`;
     }
-    const wk=key(w),t=weekTotals(w),pd=!!S.paid[wk];
-    h+=`<button class="cp ${t.p?'':'none'} ${pd?'paid':''}" onclick="togglePaid('${wk}')"><span>${t.p?money(t.p):'–'}</span><span class="tick">✓</span></button>`;
+    const wk=key(w),t=weekTotals(w),ps=paidState(wk);
+    h+=`<button class="cp ${t.p?'':'none'} ${ps.all?'paid':''}" onclick="togglePaid('${wk}')"><span>${t.p?money(t.p):'–'}</span><span class="tick">✓</span></button>`;
   }
   $('cal').innerHTML=h;
 }
@@ -361,56 +457,76 @@ function shiftCal(n){
   calStart=addDays(calStart,28*n);const mid=addDays(calStart,14);
   month=new Date(mid.getFullYear(),mid.getMonth(),1);vib(8);renderMonth();renderCal();
 }
-function togglePaid(k){
-  if(S.paid[k]){delete S.paid[k];toast('Marked as not paid')}else{S.paid[k]=key(new Date());toast('Payment received ✓')}
-  save();vib(20);renderAll();
-}
 function renderHist(){
-  const ks=Object.keys(S.entries).filter(k=>S.entries[k].h>0).sort();
+  const jobs=act(),ks=Object.keys(S.entries).filter(k=>dayTot(k).h>0).sort();
   let rec=0,due=0,html='';
   if(ks.length){
     const weeks=[];for(let w=mondayOf(new Date(ks[0]+'T00:00'));w<=mondayOf(new Date());w=addDays(w,7))weeks.push(w);
     weeks.reverse().forEach(w=>{
       const wk=key(w),t=weekTotals(w);if(!t.d)return;
-      const pd=S.paid[wk];pd?rec+=t.p:due+=t.p;
-      html+=`<div class="hrow ${pd?'paid':'due'}"><div class="l" onclick="gotoWeek('${wk}')"><b>${fmt(w,{day:'numeric',month:'short'})} – ${fmt(addDays(w,6),{day:'numeric',month:'short',year:'numeric'})}</b><br><small class="sub">${hrs(t.h)} · ${t.d} days${pd?' · paid '+fmt(new Date(pd+'T00:00'),{day:'numeric',month:'short'}):''}</small></div><div class="r"><b>${money(t.p)}</b><button class="pchk ${pd?'paid':''}" onclick="togglePaid('${wk}')"><span class="tick">✓</span>${pd?'Paid':'Mark paid'}</button></div></div>`;
+      jobs.forEach(j=>{const p=weekTotals(w,[j]).p;if(p>0)S.paid[wk+'|'+j.id]?rec+=p:due+=p});
+      const ps=paidState(wk);
+      const split=S.view==='all'&&S.jobs.length>1?'<br><small class="sub">'+S.jobs.map(j=>{const p=weekTotals(w,[j]).p;return p?`<span class="dot" style="background:${j.color}"></span> ${esc(j.name)} ${money(p)} ${S.paid[wk+'|'+j.id]?'✓':'○'}`:''}).filter(Boolean).join(' &nbsp; ')+'</small>':'';
+      html+=`<div class="hrow ${ps.all?'paid':'due'}"><div class="l" onclick="gotoWeek('${wk}')"><b>${fmt(w,{day:'numeric',month:'short'})} – ${fmt(addDays(w,6),{day:'numeric',month:'short',year:'numeric'})}</b><br><small class="sub">${hrs(t.h)} · ${t.d} days${ps.all?' · paid '+fmt(new Date(ps.date+'T00:00'),{day:'numeric',month:'short'}):''}</small>${split}</div><div class="r"><b>${money(t.p)}</b><button class="pchk ${ps.all?'paid':''}" onclick="togglePaid('${wk}')"><span class="tick">✓</span>${ps.all?'Paid':(ps.any?'Part paid':'Mark paid')}</button></div></div>`;
     });
   }
   $('hist').innerHTML=html||'<div class="card sub">No hours logged yet. Add some on the Week tab.</div>';
   $('hRec').textContent=money(rec);$('hDue').textContent=money(due);
 }
-let selDay=null;
-function gotoDate(k){selDay=k;weekStart=mondayOf(new Date(k+'T00:00'));document.querySelector('.tabs button[data-t=week]').click()}
-function gotoWeek(k){weekStart=new Date(k+'T00:00');document.querySelector('.tabs button[data-t=week]').click()}
+function gotoDate(k){selDay=k;weekStart=mondayOf(new Date(k+'T00:00'));showTab('week')}
+function gotoWeek(k){weekStart=new Date(k+'T00:00');showTab('week')}
 function shiftMonth(n){month=new Date(month.getFullYear(),month.getMonth()+n,1);calStart=mondayOf(month);vib(8);renderMonth();renderCal()}
 
-/* SETTINGS */
+/* SETTINGS (edits one job at a time) */
 function renderSet(){
-  $('rate').value=S.rate;$('cur').value=S.cur;
-  $('plan').innerHTML=DAYS.map((n,i)=>`<div class="plan"><b>${n}</b><div class="mini"><button onclick="planBump(${i},-.5)">−</button><span>${hrs(S.plan[i])}</span><button onclick="planBump(${i},.5)">+</button></div></div>`).join('')
-   +`<div class="sub" style="margin-top:6px">Total: <b>${hrs(S.plan.reduce((a,b)=>a+b,0))}</b> per week ≈ <b>${money(S.plan.reduce((a,b)=>a+b,0)*S.rate)}</b></div>`;
+  if(!jobById(editJob))editJob=S.jobs[0].id;
+  const j=jobById(editJob);
+  $('setJobs').innerHTML=S.jobs.map(x=>`<button class="jchip ${x.id===editJob?'on':''}" onclick="pickEdit('${x.id}')"><span class="dot" style="background:${x.color}"></span>${esc(x.name)}</button>`).join('')+'<button class="jchip add" onclick="addJob()">+ Job</button>';
+  if(document.activeElement!==$('jname'))$('jname').value=j.name;
+  if(document.activeElement!==$('rate'))$('rate').value=j.rate;
+  if(document.activeElement!==$('cur'))$('cur').value=S.cur;
+  $('colors').innerHTML=COLORS.map(c=>`<button class="cdot ${c===j.color?'on':''}" style="background:${c}" onclick="setColor('${c}')" aria-label="Colour"></button>`).join('');
+  $('delJob').style.display=S.jobs.length>1?'block':'none';
+  $('planName').textContent=j.name;
+  $('plan').innerHTML=DAYS.map((n,i)=>`<div class="plan"><b>${n}</b><div class="mini"><button onclick="planBump(${i},-.5)">−</button><span>${hrs(j.plan[i])}</span><button onclick="planBump(${i},.5)">+</button></div></div>`).join('')
+   +`<div class="sub" style="margin-top:6px">Total: <b>${hrs(sum(j.plan))}</b> per week ≈ <b>${money(sum(j.plan)*j.rate)}</b></div>`;
 }
-function planBump(i,n){S.plan[i]=Math.max(0,Math.min(24,S.plan[i]+n));save();vib(6);renderSet()}
-$('rate').oninput=e=>{S.rate=Math.max(0,+e.target.value||0);save();renderSet.skip=1;document.querySelector('#plan .sub:last-child').innerHTML=`Total: <b>${hrs(S.plan.reduce((a,b)=>a+b,0))}</b> per week ≈ <b>${money(S.plan.reduce((a,b)=>a+b,0)*S.rate)}</b>`};
+function pickEdit(id){editJob=id;vib(6);renderSet()}
+function setColor(c){jobById(editJob).color=c;save();vib(6);renderAll()}
+function planBump(i,n){const j=jobById(editJob);j.plan[i]=Math.max(0,Math.min(24,j.plan[i]+n));save();vib(6);renderSet()}
+$('jname').oninput=e=>{jobById(editJob).name=e.target.value||'Job';save();renderAll()};
+$('rate').oninput=e=>{jobById(editJob).rate=Math.max(0,+e.target.value||0);save();renderSet()};
 $('cur').oninput=e=>{S.cur=e.target.value||'£';save()};
+function delJob(){
+  if(!delJob.armed){delJob.armed=1;toast('Tap again to delete this job and its hours');setTimeout(()=>delJob.armed=0,3000);return}
+  delJob.armed=0;const id=editJob;
+  S.jobs=S.jobs.filter(j=>j.id!==id);
+  Object.keys(S.entries).forEach(k=>{delete S.entries[k][id];if(!Object.keys(S.entries[k]).length)delete S.entries[k]});
+  Object.keys(S.paid).forEach(k=>{if(k.endsWith('|'+id))delete S.paid[k]});
+  S.view=S.jobs.length>1?'all':S.jobs[0].id;editJob=S.jobs[0].id;save();renderAll();toast('Job deleted');
+}
 function exportData(){
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));
   a.download='worklog-backup-'+key(new Date())+'.json';a.click();toast('Backup saved');
 }
 $('imp').onchange=e=>{
   const f=e.target.files[0];if(!f)return;const r=new FileReader();
-  r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.entries)throw 0;S=Object.assign({},def,d);save();renderAll();toast('Imported ✓')}catch(x){toast('Invalid file')}};
+  r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.entries)throw 0;S=migrate(d);editJob=S.jobs[0].id;save();renderAll();toast('Imported ✓')}catch(x){toast('Invalid file')}};
   r.readAsText(f);
 };
-function resetAll(){if(confirm('Delete ALL work log data? This cannot be undone.')){S={...def,entries:{},dismissed:{},paid:{}};save();renderAll();toast('All data deleted')}}
+function resetAll(){
+  if(!resetAll.armed){resetAll.armed=1;toast('Tap again to delete everything');setTimeout(()=>resetAll.armed=0,3000);return}
+  resetAll.armed=0;S=defState();editJob='j1';save();renderAll();toast('All data deleted');
+}
 
 /* TABS */
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+  tab=b.dataset.t;
   document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));
-  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.id==='v-'+b.dataset.t));
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.id==='v-'+tab));
   document.querySelector('main').scrollTop=0;vib(8);renderAll();
 });
-function renderAll(){renderWeek();renderMonth();renderCal();renderHist();renderSet()}
+function renderAll(){renderBar();renderWeek();renderMonth();renderCal();renderHist();renderSet()}
 renderAll();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
