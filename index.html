@@ -509,9 +509,25 @@ function exportData(){
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));
   a.download='worklog-backup-'+key(new Date())+'.json';a.click();toast('Backup saved');
 }
+/* A backup file replaces everything. A file marked "merge" adds its jobs and hours to what you already have. */
+function mergeImport(d){
+  const inc=migrate(d),map={};
+  const hasData=id=>Object.values(S.entries).some(E=>E[id]);
+  inc.jobs.forEach(ij=>{
+    let t=S.jobs.find(j=>j.id===ij.id||j.name.toLowerCase()===ij.name.toLowerCase());
+    if(!t&&S.jobs.length===1&&S.jobs[0].name==='My job'&&!hasData(S.jobs[0].id)){t=S.jobs[0];Object.assign(t,{name:ij.name,rate:ij.rate,color:ij.color,plan:ij.plan})}
+    if(!t){t={...ij,id:S.jobs.some(j=>j.id===ij.id)?'j'+Date.now().toString(36):ij.id,color:ij.color||COLORS[S.jobs.length%COLORS.length]};S.jobs.push(t)}
+    map[ij.id]=t.id;
+  });
+  Object.keys(inc.entries).forEach(k=>Object.keys(inc.entries[k]).forEach(jid=>{if(map[jid])setEntry(k,map[jid],inc.entries[k][jid])}));
+  Object.keys(inc.paid).forEach(pk=>{const[wk,jid]=pk.split('|');if(map[jid])S.paid[wk+'|'+map[jid]]=inc.paid[pk]});
+  S.view=S.jobs.length>1?'all':S.jobs[0].id;editJob=map[inc.jobs[0].id];
+}
 $('imp').onchange=e=>{
   const f=e.target.files[0];if(!f)return;const r=new FileReader();
-  r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.entries)throw 0;S=migrate(d);editJob=S.jobs[0].id;save();renderAll();toast('Imported ✓')}catch(x){toast('Invalid file')}};
+  r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.entries)throw 0;
+    if(d.merge){mergeImport(d);toast('Hours added ✓')}else{S=migrate(d);editJob=S.jobs[0].id;toast('Imported ✓')}
+    save();renderAll()}catch(x){toast('Invalid file')}e.target.value=''};
   r.readAsText(f);
 };
 function resetAll(){
