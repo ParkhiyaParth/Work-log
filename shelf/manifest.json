@@ -1,0 +1,12 @@
+{
+  "name": "Shelf Scan",
+  "short_name": "Shelf Scan",
+  "description": "Scan bottles, enter quantity, pick from storage",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1b1418",
+  "theme_color": "#7a1f3d",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

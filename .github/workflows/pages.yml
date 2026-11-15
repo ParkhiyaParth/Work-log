@@ -1,7 +1,7 @@
 name: Deploy Work Log
 on:
   push:
-    branches: [main, ccr-bc1c3867-ybjc2r]
+    branches: [main, ccr-bc1c3867-ybjc2r, ccr-323dcf13-6taa0w]
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,6 +22,7 @@ jobs:
         with:
           enablement: true
       - run: mkdir _site && cp index.html manifest.json sw.js icon.svg _site/
+      - run: cp -r shelf _site/shelf
       - name: Add the latest Android APK
         env:
           GH_TOKEN: ${{ github.token }}
