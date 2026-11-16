@@ -56,6 +56,13 @@ nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);b
 nav button{flex:1;background:none;color:var(--mute);border-radius:0;min-height:60px;font-size:13px;position:relative}
 nav button[aria-selected=true]{color:var(--accent)}
 nav .n{position:absolute;top:6px;margin-left:6px;background:var(--warn);color:#fff;border-radius:999px;font-size:11px;padding:1px 6px}
+.thumb{width:56px;height:56px;border-radius:10px;object-fit:cover;flex:none;background:var(--line)}
+.thumb.ph{display:grid;place-items:center;color:var(--mute);font-size:22px}
+.hero{width:100%;max-height:220px;object-fit:contain;border-radius:12px;background:var(--bg)}
+.newbanner{background:var(--accent);color:var(--on-accent);border-radius:12px;padding:12px 14px;font-weight:700;font-size:18px}
+.newbanner small{display:block;font-weight:500;font-size:14px;opacity:.9;margin-top:2px}
+.photoRow{display:flex;align-items:center;gap:12px}
+.photoRow input[type=file]{display:none}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;z-index:5;max-width:90%}
 </style>
 </head>
@@ -68,19 +75,21 @@ nav .n{position:absolute;top:6px;margin-left:6px;background:var(--warn);color:#f
         <div class="scanwrap"><video id="vid" playsinline muted></video></div>
         <button class="ghost" id="camStop">Stop camera</button>
       </div>
-      <div class="card stack">
+      <div class="card stack" id="scanCard">
         <div>
-          <label for="code">Barcode</label>
+          <label for="code">Barcode or product name</label>
           <div class="row">
-            <input id="code" inputmode="numeric" autocomplete="off" placeholder="Scan or type barcode">
+            <input id="code" autocomplete="off" placeholder="Scan barcode or type name">
             <button id="camStart" aria-label="Scan with camera">Scan</button>
           </div>
           <p class="hint" id="camMsg" style="margin:6px 0 0"></p>
         </div>
-        <button id="lookup">Find product</button>
+        <div class="list" id="matches"></div>
+        <button class="ghost" id="noBarcode">Product has no barcode? Add it by name</button>
       </div>
 
       <div id="found" hidden class="card stack">
+        <img id="fPhoto" class="hero" alt="" hidden>
         <div><div class="name" id="fName"></div><div class="code" id="fCode"></div></div>
         <div>
           <label for="qty">Quantity still needed after shelving</label>
@@ -93,15 +102,22 @@ nav .n{position:absolute;top:6px;margin-left:6px;background:var(--warn);color:#f
         </div>
         <button id="done">Shelf is full, next item</button>
         <button id="take" class="warn" hidden>Take from storage</button>
+        <button class="ghost" id="cancelFound">Cancel</button>
       </div>
 
       <div id="newp" hidden class="card stack">
-        <div><strong>New barcode.</strong> <span class="code" id="nCode"></span></div>
+        <div class="newbanner" id="nBanner">New product<small id="nSub"></small></div>
         <div>
           <label for="nName">Product name</label>
           <input id="nName" autocomplete="off" placeholder="e.g. Royal Stag 750 ml">
         </div>
-        <button id="saveNew">Save product</button>
+        <div class="photoRow">
+          <img id="nImg" class="thumb ph" alt="" hidden>
+          <label class="ghost" for="nFile" style="margin:0;padding:12px 16px;border:1.5px solid var(--line);border-radius:12px;font-weight:600;color:var(--ink);font-size:16px">Take product photo</label>
+          <input id="nFile" type="file" accept="image/*" capture="environment">
+        </div>
+        <button id="saveNew">Save product and enter quantity</button>
+        <button class="ghost" id="cancelNew">Cancel</button>
       </div>
 
       <div id="todayBox">
@@ -121,8 +137,13 @@ nav .n{position:absolute;top:6px;margin-left:6px;background:var(--warn);color:#f
   <section id="tab-products" hidden>
     <h1>Products</h1>
     <div class="card stack">
-      <div><label for="pCode">Barcode</label><input id="pCode" inputmode="numeric" autocomplete="off"></div>
+      <div><label for="pCode">Barcode (leave empty if none)</label><input id="pCode" inputmode="numeric" autocomplete="off"></div>
       <div><label for="pName">Product name</label><input id="pName" autocomplete="off"></div>
+      <div class="photoRow">
+        <img id="pImg" class="thumb ph" alt="" hidden>
+        <label class="ghost" for="pFile" style="margin:0;padding:12px 16px;border:1.5px solid var(--line);border-radius:12px;font-weight:600;color:var(--ink);font-size:16px">Product photo</label>
+        <input id="pFile" type="file" accept="image/*" capture="environment">
+      </div>
       <button id="pSave">Add or update product</button>
     </div>
     <h2>Saved products <span id="pCount"></span></h2>
@@ -164,26 +185,97 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
   render();
 });
 
-/* lookup */
-function lookup(raw) {
-  const code = String(raw || '').trim();
-  if (!code) return;
-  $('code').value = code;
-  $('found').hidden = $('newp').hidden = true;
-  const p = db.products[code];
-  if (p) {
-    cur = code; $('fName').textContent = p.name; $('fCode').textContent = code;
-    $('qty').value = 0; updQty(); $('found').hidden = false;
-    $('qty').focus(); $('qty').select();
-  } else {
-    cur = null; $('nCode').textContent = code; $('nName').value = ''; $('newp').hidden = false; $('nName').focus();
-  }
+/* helpers */
+const NB = 'NB-';
+const hasCode = c => !c.startsWith(NB);
+const newId = () => NB + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+function thumb(src) { if (src) { const i = el('img', 'thumb'); i.src = src; i.alt = ''; return i; } return el('div', 'thumb ph', '🍾'); }
+function readPhoto(file) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), im = new Image();
+    im.onload = () => {
+      const k = Math.min(1, 480 / Math.max(im.width, im.height)), c = document.createElement('canvas');
+      c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+      res(c.toDataURL('image/jpeg', 0.72));
+    };
+    im.onerror = () => { URL.revokeObjectURL(url); rej(); };
+    im.src = url;
+  });
 }
-$('lookup').onclick = () => lookup($('code').value);
+function bindPhoto(fileId, imgId, set) {
+  $(fileId).onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try { const d = await readPhoto(f); set(d); const i = $(imgId); i.src = d; i.hidden = false; } catch (x) { toast('Could not read that photo'); }
+    e.target.value = '';
+  };
+}
+let newPhoto = '', newKey = '', prodPhoto = '', editKey = '';
+bindPhoto('nFile', 'nImg', d => newPhoto = d);
+bindPhoto('pFile', 'pImg', d => prodPhoto = d);
+
+/* lookup */
+function resetShelve() {
+  cur = null; newKey = ''; newPhoto = '';
+  $('found').hidden = $('newp').hidden = true; $('scanCard').hidden = false;
+  $('code').value = ''; $('matches').textContent = '';
+}
+function showFound(key) {
+  const p = db.products[key]; cur = key;
+  $('scanCard').hidden = true; $('newp').hidden = true;
+  $('fName').textContent = p.name; $('fCode').textContent = hasCode(key) ? key : 'No barcode';
+  const ph = $('fPhoto'); ph.hidden = !p.photo; if (p.photo) ph.src = p.photo;
+  $('qty').value = 0; updQty(); $('found').hidden = false;
+  window.scrollTo({ top: 0 });
+  setTimeout(() => { $('qty').focus(); $('qty').select(); }, 50);
+}
+function showNew(code) {
+  newKey = code || newId(); newPhoto = '';
+  $('scanCard').hidden = true; $('found').hidden = true;
+  $('nBanner').firstChild.textContent = code ? 'New product' : 'New product (no barcode)';
+  $('nSub').textContent = code ? 'Barcode ' + code + ' is not saved yet. Add the name and a photo.' : 'Enter the name and take a photo so you can find it again.';
+  $('nName').value = $('code').value && !code ? $('code').value : '';
+  $('nImg').hidden = true; $('newp').hidden = false; window.scrollTo({ top: 0 });
+  setTimeout(() => $('nName').focus(), 50);
+}
+function lookupCode(code) {
+  code = String(code || '').trim(); if (!code) return;
+  $('code').value = code;
+  if (db.products[code]) showFound(code); else showNew(code);
+}
+function lookup(raw) {
+  const q = String(raw || '').trim();
+  if (!q) return;
+  if (db.products[q] || /^\d+$/.test(q)) return lookupCode(q);
+  const hits = searchName(q, true);
+  if (!hits.length && !/\s/.test(q) && /\d/.test(q) && q.length >= 6) lookupCode(q);
+}
+function searchName(q, render) {
+  const t = q.toLowerCase();
+  const hits = Object.entries(db.products).filter(([c, p]) => p.name.toLowerCase().includes(t)).slice(0, 8);
+  if (render) {
+    const L = $('matches'); L.textContent = '';
+    hits.forEach(([c, p]) => {
+      const row = el('button', 'item ghost'); row.style.cssText = 'text-align:left;color:var(--ink);font-weight:600';
+      const g = el('div', 'grow', p.name); row.append(thumb(p.photo), g); row.onclick = () => showFound(c); L.appendChild(row);
+    });
+    if (!hits.length) { const n = el('div', 'empty', 'No saved product called "' + q + '".'); L.appendChild(n); }
+  }
+  return hits;
+}
+$('code').addEventListener('input', () => {
+  const q = $('code').value.trim();
+  if (!q || /^\d+$/.test(q)) { $('matches').textContent = ''; return; }
+  searchName(q, true);
+});
 $('code').addEventListener('keydown', e => { if (e.key === 'Enter') lookup($('code').value); });
+$('noBarcode').onclick = () => showNew('');
+$('cancelFound').onclick = resetShelve;
+$('cancelNew').onclick = resetShelve;
 $('saveNew').onclick = () => {
   const n = $('nName').value.trim(); if (!n) return toast('Enter a product name');
-  db.products[$('nCode').textContent] = { name: n }; save(); toast('Saved'); lookup($('nCode').textContent);
+  db.products[newKey] = { name: n, photo: newPhoto || '' }; save(); toast('Product saved');
+  const k = newKey; newPhoto = ''; showFound(k);
 };
 $('nName').addEventListener('keydown', e => { if (e.key === 'Enter') $('saveNew').click(); });
 
@@ -203,7 +295,7 @@ function finish(inStorage) {
   }
   db.today.items.unshift({ code: cur, name, short: inStorage ? n : 0, t: Date.now() });
   save(); toast(inStorage ? `${n} added to storage list` : 'Shelf full');
-  cur = null; $('found').hidden = true; $('code').value = ''; render();
+  resetShelve(); render();
   window.scrollTo({ top: 0 });
 }
 $('done').onclick = () => finish(false);
@@ -212,7 +304,7 @@ $('take').onclick = () => finish(true);
 /* camera scanner */
 let stream = null, loop = 0, zx = null;
 const FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf'];
-function onCode(c) { stopCam(); if (navigator.vibrate) navigator.vibrate(60); lookup(c); }
+function onCode(c) { stopCam(); if (navigator.vibrate) navigator.vibrate(60); lookupCode(c); }
 async function startCam() {
   $('camMsg').textContent = '';
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { $('camMsg').textContent = 'Camera needs the https link. You can still type the barcode.'; return; }
@@ -262,8 +354,8 @@ function renderPicks() {
     const row = el('label', 'item' + (p.done ? ' done' : ''));
     const c = el('input', 'chk'); c.type = 'checkbox'; c.checked = p.done; c.style.width = '28px'; c.style.padding = '0';
     c.onchange = () => { p.done = c.checked; save(); renderPicks(); renderBadge(); };
-    const g = el('div', 'grow'); g.append(el('div', 't', p.name), el('div', 'code', p.code));
-    row.append(c, g, el('span', 'badge warn', '× ' + p.qty));
+    const g = el('div', 'grow'); g.append(el('div', 't', p.name), el('div', 'code', hasCode(p.code) ? p.code : 'No barcode'));
+    row.append(c, thumb((db.products[p.code] || {}).photo), g, el('span', 'badge warn', '× ' + p.qty));
     L.appendChild(row);
   });
 }
@@ -276,7 +368,7 @@ function renderToday() {
   $('todayBox').hidden = !db.today.items.length;
   db.today.items.forEach(it => {
     const row = el('div', 'item'); const g = el('div', 'grow'); g.append(el('div', 't', it.name));
-    row.append(g, it.short ? el('span', 'badge warn', it.short + ' from storage') : el('span', 'badge ok', 'Full'));
+    row.append(thumb((db.products[it.code] || {}).photo), g, it.short ? el('span', 'badge warn', it.short + ' from storage') : el('span', 'badge ok', 'Full'));
     L.appendChild(row);
   });
 }
@@ -286,21 +378,25 @@ function renderProducts() {
   const f = $('pFilter').value.trim().toLowerCase(), L = $('pList'); L.textContent = '';
   const all = Object.entries(db.products).sort((a, b) => a[1].name.localeCompare(b[1].name));
   $('pCount').textContent = '(' + all.length + ')';
-  const rows = all.filter(([c, p]) => !f || c.includes(f) || p.name.toLowerCase().includes(f));
+  const rows = all.filter(([c, p]) => !f || (hasCode(c) && c.includes(f)) || p.name.toLowerCase().includes(f));
   if (!rows.length) L.appendChild(el('div', 'empty', all.length ? 'No match.' : 'No products yet. Add the first one above, or scan a new barcode on the Shelve tab.'));
   rows.forEach(([c, p]) => {
-    const row = el('div', 'item'); const g = el('div', 'grow'); g.append(el('div', 't', p.name), el('div', 'code', c));
-    const ed = el('button', 'ghost small', 'Edit'); ed.onclick = () => { $('pCode').value = c; $('pName').value = p.name; $('pName').focus(); window.scrollTo({ top: 0 }); };
+    const row = el('div', 'item'); const g = el('div', 'grow'); g.append(el('div', 't', p.name), el('div', 'code', hasCode(c) ? c : 'No barcode'));
+    const ed = el('button', 'ghost small', 'Edit'); ed.onclick = () => { editKey = c; prodPhoto = ''; $('pCode').value = hasCode(c) ? c : ''; $('pName').value = p.name; const i = $('pImg'); i.hidden = !p.photo; if (p.photo) i.src = p.photo; $('pName').focus(); window.scrollTo({ top: 0 }); };
     const rm = el('button', 'ghost small', 'Delete'); let armed = false;
     rm.onclick = () => { if (!armed) { armed = true; rm.textContent = 'Sure?'; setTimeout(() => { armed = false; rm.textContent = 'Delete'; }, 2500); } else { delete db.products[c]; save(); renderProducts(); } };
-    row.append(g, ed, rm); L.appendChild(row);
+    row.append(thumb(p.photo), g, ed, rm); L.appendChild(row);
   });
 }
 $('pFilter').oninput = renderProducts;
 $('pSave').onclick = () => {
   const c = $('pCode').value.trim(), n = $('pName').value.trim();
-  if (!c || !n) return toast('Enter barcode and name');
-  db.products[c] = { name: n }; save(); $('pCode').value = $('pName').value = ''; toast('Saved'); renderProducts();
+  if (!n) return toast('Enter a product name');
+  const key = c || (editKey && !hasCode(editKey) ? editKey : newId());
+  const old = db.products[editKey] || db.products[key] || {};
+  db.products[key] = { name: n, photo: prodPhoto || old.photo || '' };
+  if (editKey && editKey !== key) delete db.products[editKey];
+  save(); editKey = ''; prodPhoto = ''; $('pCode').value = $('pName').value = ''; $('pImg').hidden = true; toast('Saved'); renderProducts();
 };
 
 /* backup */
