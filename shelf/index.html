@@ -15,6 +15,8 @@
 :root{--bg:#f6f1ea;--card:#fffdf9;--ink:#26191e;--mute:#7d6d73;--line:#e6dccf;--accent:#7a1f3d;--on-accent:#fff;--ok:#2f7d4f;--warn:#b4631a;--warn-bg:#fbeedd;--ok-bg:#e3f2e8}
 @media (prefers-color-scheme:dark){:root{--bg:#1b1418;--card:#261c21;--ink:#f3e9ea;--mute:#a8969c;--line:#3a2c33;--accent:#d9587f;--on-accent:#1b1418;--ok:#6cc790;--warn:#f0a35e;--warn-bg:#3a2815;--ok-bg:#16301f}}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
+input[type=number]{-moz-appearance:textfield;appearance:textfield}input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding-bottom:84px;-webkit-tap-highlight-color:transparent}
 main{max-width:560px;margin:0 auto;padding:16px 16px 24px}
@@ -63,10 +65,65 @@ nav .n{position:absolute;top:6px;margin-left:6px;background:var(--warn);color:#f
 .newbanner small{display:block;font-weight:500;font-size:14px;opacity:.9;margin-top:2px}
 .photoRow{display:flex;align-items:center;gap:12px}
 .photoRow input[type=file]{display:none}
+/* polish */
+:root{--shadow:0 1px 2px rgba(60,20,35,.06),0 6px 18px rgba(60,20,35,.07);--ease:cubic-bezier(.2,.8,.2,1)}
+@media (prefers-color-scheme:dark){:root{--shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.3)}}
+body{padding-top:0}
+.appbar{background:linear-gradient(135deg,#7a1f3d,#a8325a);color:#fff;padding:calc(14px + env(safe-area-inset-top,0px)) 16px 22px;border-radius:0 0 24px 24px;box-shadow:var(--shadow)}
+.appbar .in{max-width:560px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.appbar img{width:40px;height:40px;border-radius:11px;flex:none}
+.appbar b{font-size:20px;letter-spacing:-.01em;display:block}
+.appbar span{font-size:13px;opacity:.85}
+.stats{margin-left:auto;display:flex;gap:8px}
+.stat{background:rgba(255,255,255,.16);border-radius:12px;padding:6px 12px;text-align:center;min-width:58px}
+.stat i{font-style:normal;font-weight:800;font-size:18px;display:block;line-height:1.1}
+.stat u{text-decoration:none;font-size:11px;opacity:.85}
+main{margin-top:-8px}
+h1{display:none}
+.card{box-shadow:var(--shadow);border-radius:18px}
+button{transition:transform .12s var(--ease),filter .15s,background .2s;-webkit-user-select:none;user-select:none}
+button:active:not(:disabled){transform:scale(.96);filter:brightness(.92)}
+input{transition:border-color .2s,box-shadow .2s}
+input:focus{border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent);outline:none}
+#done,#take,#saveNew{min-height:56px;font-size:17px;border-radius:14px}
+#done{background:var(--ok);color:#fff}
+@keyframes rise{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.18)}100%{transform:scale(1)}}
+@keyframes sweep{0%{top:12%}50%{top:88%}100%{top:12%}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,16px)}to{opacity:1;transform:translate(-50%,0)}}
+section,#found,#newp,#scanCard,#camBox,#todayBox{animation:rise .32s var(--ease) both}
+.item{animation:slideIn .28s var(--ease) both;box-shadow:var(--shadow);border-radius:14px}
+.item:nth-child(2){animation-delay:.04s}.item:nth-child(3){animation-delay:.08s}.item:nth-child(4){animation-delay:.12s}.item:nth-child(5){animation-delay:.16s}.item:nth-child(n+6){animation-delay:.2s}
+.bump{animation:pop .22s var(--ease)}
+.newbanner{background:linear-gradient(135deg,#7a1f3d,#b8396a);color:#fff;animation:pop .45s var(--ease)}
+.scanwrap{border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+.scanwrap video{border-radius:0}
+.scanwrap::after{left:12%;right:12%;top:12%;height:2px;animation:sweep 2.2s ease-in-out infinite;border-radius:2px}
+.scanwrap::before{content:"";position:absolute;inset:14% 10%;border:3px solid rgba(255,255,255,.85);border-radius:16px;z-index:1;pointer-events:none;clip-path:polygon(0 0,28% 0,28% 3px,3px 3px,3px 28%,0 28%,0 0,100% 0,100% 28%,calc(100% - 3px) 28%,calc(100% - 3px) 3px,72% 3px,72% 0,100% 0,100% 100%,72% 100%,72% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 72%,100% 72%,100% 100%,0 100%,0 72%,3px 72%,3px calc(100% - 3px),28% calc(100% - 3px),28% 100%,0 100%)}
+.scanwrap::after{z-index:1}
+.thumb{box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.hero{animation:pop .4s var(--ease)}
+nav{background:color-mix(in srgb,var(--card) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 -6px 20px rgba(60,20,35,.08)}
+nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 0;font-size:12px;transition:color .2s}
+nav button svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .25s var(--ease)}
+nav button[aria-selected=true] svg{transform:translateY(-2px) scale(1.12)}
+nav button[aria-selected=true]::before{content:"";position:absolute;top:0;width:34px;height:3px;border-radius:0 0 4px 4px;background:var(--accent);animation:pop .3s var(--ease)}
+nav .n{top:4px;margin-left:0;left:calc(50% + 6px)}
+.toast{animation:toastIn .25s var(--ease) both;box-shadow:var(--shadow)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;z-index:5;max-width:90%}
 </style>
 </head>
 <body>
+<header class="appbar"><div class="in">
+  <img src="icon.svg" alt="">
+  <div><b>Shelf Scan</b><span id="dateLbl"></span></div>
+  <div class="stats">
+    <div class="stat"><i id="stDone">0</i><u>done</u></div>
+    <div class="stat"><i id="stPick">0</i><u>to fetch</u></div>
+  </div>
+</div></header>
 <main>
   <section id="tab-shelve">
     <h1>Shelve</h1>
@@ -159,9 +216,9 @@ nav .n{position:absolute;top:6px;margin-left:6px;background:var(--warn);color:#f
 </main>
 
 <nav role="tablist">
-  <button role="tab" data-tab="shelve" aria-selected="true">Shelve</button>
-  <button role="tab" data-tab="storage" aria-selected="false">Storage<span class="n" id="pickN" hidden></span></button>
-  <button role="tab" data-tab="products" aria-selected="false">Products</button>
+  <button role="tab" data-tab="shelve" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M4 7V5h3M17 5h3v2M20 17v2h-3M7 19H4v-2M4 12h16"/></svg>Shelve</button>
+  <button role="tab" data-tab="storage" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v10l-9 4-9-4zM3 8l9 5 9-5M12 13v9"/></svg>Storage<span class="n" id="pickN" hidden></span></button>
+  <button role="tab" data-tab="products" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M9 3h6v4l2 3v11H7V10l2-3zM7 14h10"/></svg>Products</button>
 </nav>
 
 <script>
@@ -283,8 +340,8 @@ $('nName').addEventListener('keydown', e => { if (e.key === 'Enter') $('saveNew'
 const qv = () => Math.max(0, parseInt($('qty').value, 10) || 0);
 function updQty() { const n = qv(); $('take').hidden = n === 0; $('take').textContent = `Take ${n} from storage`; $('done').hidden = n > 0; }
 $('qty').oninput = updQty;
-$('plus').onclick = () => { $('qty').value = qv() + 1; updQty(); };
-$('minus').onclick = () => { $('qty').value = Math.max(0, qv() - 1); updQty(); };
+$('plus').onclick = () => { $('qty').value = qv() + 1; updQty(); bump($('qty')); };
+$('minus').onclick = () => { $('qty').value = Math.max(0, qv() - 1); updQty(); bump($('qty')); };
 
 function finish(inStorage) {
   if (!cur) return; rollDay();
@@ -293,6 +350,7 @@ function finish(inStorage) {
     const ex = db.picks.find(p => p.code === cur && !p.done);
     if (ex) ex.qty += n; else db.picks.push({ code: cur, name, qty: n, done: false });
   }
+  if (navigator.vibrate) navigator.vibrate(inStorage ? [20, 40, 20] : 30);
   db.today.items.unshift({ code: cur, name, short: inStorage ? n : 0, t: Date.now() });
   save(); toast(inStorage ? `${n} added to storage list` : 'Shelf full');
   resetShelve(); render();
@@ -360,7 +418,7 @@ function renderPicks() {
   });
 }
 $('clearDone').onclick = () => { db.picks = db.picks.filter(p => !p.done); save(); render(); };
-function renderBadge() { const n = db.picks.filter(p => !p.done).length; $('pickN').hidden = !n; $('pickN').textContent = n; }
+function renderBadge() { const n = db.picks.filter(p => !p.done).length; $('pickN').hidden = !n; $('pickN').textContent = n; $('stPick').textContent = n; $('stDone').textContent = db.today.items.length; }
 
 /* today */
 function renderToday() {
@@ -413,6 +471,8 @@ $('imp').onclick = () => {
   } catch (e) { toast('That is not a valid backup'); }
 };
 
+$('dateLbl').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
+const bump = e => { e.classList.remove('bump'); void e.offsetWidth; e.classList.add('bump'); if (navigator.vibrate) navigator.vibrate(12); };
 function render() { renderToday(); renderPicks(); renderProducts(); renderBadge(); }
 render();
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
