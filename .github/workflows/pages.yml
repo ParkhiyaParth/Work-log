@@ -32,5 +32,7 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+      - name: Wait for the upload to become visible
+        run: sleep 25
       - id: d
         uses: actions/deploy-pages@v4
