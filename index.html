@@ -602,9 +602,17 @@ function delJob(){
   S.payments=S.payments.filter(p=>p.jobId!==id);
   S.view=S.jobs.length>1?'all':S.jobs[0].id;editJob=S.jobs[0].id;save();renderAll();toast('Job deleted');
 }
-function exportData(){
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));
-  a.download='worklog-backup-'+key(new Date())+'.json';a.click();toast('Backup saved');
+async function exportData(){
+  const name='worklog-backup-'+key(new Date())+'.json',text=JSON.stringify(S,null,1),C=window.Capacitor;
+  if(C&&C.isNativePlatform&&C.isNativePlatform()){   // inside the Android app: open the share sheet so the file can be saved
+    try{
+      const r=await C.registerPlugin('Filesystem').writeFile({path:name,data:text,directory:'CACHE',encoding:'utf8'});
+      await C.registerPlugin('Share').share({title:'Work Log backup',url:r.uri,dialogTitle:'Save your backup'});
+      toast('Backup ready');return;
+    }catch(e){if(/cancel/i.test(String(e&&e.message||e)))return}
+  }
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));
+  a.download=name;a.click();toast('Backup saved');
 }
 /* A backup file replaces everything. A file marked "merge" adds its jobs and hours to what you already have. */
 function mergeImport(d){

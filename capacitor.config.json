@@ -2,5 +2,12 @@
   "appId": "com.worklog.app",
   "appName": "Work Log",
   "webDir": "www",
-  "backgroundColor": "#0f1220"
+  "backgroundColor": "#0f1220",
+  "server": {
+    "url": "https://parkhiyaparth.github.io/Work-log/",
+    "androidScheme": "https",
+    "allowNavigation": [
+      "parkhiyaparth.github.io"
+    ]
+  }
 }
