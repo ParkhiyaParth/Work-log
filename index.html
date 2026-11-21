@@ -67,7 +67,7 @@ h1{font-size:26px;margin:4px 0 2px}
 .banner b{font-size:18px}
 .banner button{margin-left:auto;background:rgba(255,255,255,.25);border:0;color:#fff;width:32px;height:32px;border-radius:50%;font-size:16px}
 .tabs{position:absolute;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 12px);background:var(--card);border-radius:26px;box-shadow:0 10px 36px rgba(60,40,180,.25);display:flex;padding:6px;gap:4px}
-.tabs button{flex:1;border:0;background:none;color:var(--mute);padding:8px 0;border-radius:20px;font-size:11px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:2px;transition:.25s}
+.tabs button{flex:1;min-width:0;border:0;background:none;color:var(--mute);padding:8px 0;border-radius:20px;font-size:10.5px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:2px;transition:.25s}
 .tabs button span{font-size:22px;transition:.25s}
 .tabs button.on{color:var(--pri);background:rgba(108,92,231,.12)}
 .tabs button.on span{transform:translateY(-2px) scale(1.15)}
@@ -112,6 +112,20 @@ input[type=number],input[type=text]{background:var(--line);border:0;border-radiu
 .prow:last-child{border-bottom:0}
 .prow small{color:var(--mute);display:block}
 input[type=date]{background:var(--line);border:0;border-radius:12px;padding:10px 12px;font-size:16px;color:var(--ink);font-weight:600;font-family:inherit}
+/* wallet */
+.gain{color:var(--ok)}.loss{color:var(--bad)}
+.ico{font-size:20px;width:34px;height:34px;border-radius:12px;background:var(--line);display:grid;place-items:center;flex:none}
+.dhead{font-size:12px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.5px;margin:16px 4px 2px}
+.cbar{margin:8px 0}.cbar .t{height:8px;background:var(--line);border-radius:6px;overflow:hidden;margin-top:4px}.cbar .t i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--pri2),var(--pri))}
+.cbar div.l{display:flex;justify-content:space-between;font-size:14px}
+.wish{margin-top:12px}.wish .st{font-weight:700;margin:6px 0 2px}
+.wish .acts{display:flex;gap:8px;margin-top:10px}.wish .acts button{flex:1;border:0;border-radius:14px;padding:10px;font-weight:700;font-family:inherit;background:var(--line);color:var(--ink)}
+.wish .acts .buy{background:var(--ok);color:#fff}
+.seg{display:flex;gap:8px;justify-content:center;margin:12px 0 4px}
+.seg button{flex:1;border:0;border-radius:14px;padding:12px;font-weight:700;font-size:15px;background:var(--line);color:var(--ink);font-family:inherit}
+.seg button.on.out{background:var(--bad);color:#fff}.seg button.on.in{background:var(--ok);color:#fff}
+input[type=time]{background:var(--line);border:0;border-radius:12px;padding:10px 12px;font-size:16px;color:var(--ink);font-weight:600;font-family:inherit}
+.sheet{max-height:94%;overflow-y:auto}
 /* calendar */
 .cal{display:grid;grid-template-columns:repeat(7,1fr) 58px;gap:5px;margin-top:10px}
 .ch{font-size:11px;color:var(--mute);text-align:center;font-weight:700;letter-spacing:.4px}
@@ -225,6 +239,48 @@ input[type=date]{background:var(--line);border:0;border-radius:12px;padding:10px
       <div class="sub" style="margin-top:12px">Weeks you tick as paid count as received in full. If you log a payment here for the same week, don't tick it as well, or it is counted twice.</div>
     </section>
 
+    <!-- WALLET -->
+    <section class="view" id="v-wal">
+      <div class="nav" id="walNav">
+        <button onclick="shiftMonth(-1)">‹</button>
+        <div class="t"><h1 id="wlTitle"></h1><div class="sub" id="wlSub"></div></div>
+        <button onclick="shiftMonth(1)">›</button>
+      </div>
+      <div class="jobs" id="walTabs" style="margin-top:12px"></div>
+
+      <div id="w-sav">
+        <div class="hero">
+          <div class="sub" style="color:#e4e0ff" id="svLabel">Total savings</div>
+          <div class="big" id="svTotal">0</div>
+          <div class="row"><div><b id="svIn">0</b>money in</div><div><b id="svOut">0</b>spent</div><div><b id="svNet">0</b>saved this month</div></div>
+        </div>
+        <div class="card" id="svRows"></div>
+        <div class="card"><b>Where it went</b><div id="svCats"></div></div>
+        <div class="card"><div class="field" style="margin:0"><label>Savings I already had</label><input type="number" id="openBal" inputmode="decimal" step="0.01" placeholder="0"></div><div class="sub" style="margin-top:6px">Money you had before you started tracking here. It is added to your total.</div></div>
+      </div>
+
+      <div id="w-act" style="display:none">
+        <button class="btn" onclick="openTx()">+ Add money in / out</button>
+        <div class="jobs" id="actFilter" style="margin-top:10px"></div>
+        <div id="actList"></div>
+      </div>
+
+      <div id="w-wish" style="display:none">
+        <div class="hero">
+          <div class="sub" style="color:#e4e0ff">Your savings right now</div>
+          <div class="big" id="wsNow">0</div>
+          <div class="row"><div><b id="wsPace">0</b>saved a month</div><div><b id="wsDays">0</b>days of history</div></div>
+        </div>
+        <div class="sub" style="margin-top:8px" id="wsNote"></div>
+        <div class="jobs" id="wishMode" style="margin-top:10px"></div>
+        <div class="card"><b>Add something you want</b>
+          <div class="field"><label>Item</label><input type="text" id="wName" maxlength="40" placeholder="e.g. Headphones" style="width:170px;text-align:left"></div>
+          <div class="field"><label>Price</label><input type="number" id="wPrice" inputmode="decimal" step="0.01" placeholder="0"></div>
+          <button class="btn" onclick="addWish()">Add to wishlist</button></div>
+        <div id="wishList"></div>
+      </div>
+    </section>
+
     <!-- SETTINGS -->
     <section class="view" id="v-set">
       <h1>Settings</h1>
@@ -254,6 +310,7 @@ input[type=date]{background:var(--line);border:0;border-radius:12px;padding:10px
     <button data-t="month"><span>🗓️</span>Month</button>
     <button data-t="hist"><span>🧾</span>History</button>
     <button data-t="bal"><span>💷</span>Balance</button>
+    <button data-t="wal"><span>👛</span>Wallet</button>
     <button data-t="set"><span>⚙️</span>Settings</button>
   </nav>
 
@@ -283,6 +340,17 @@ input[type=date]{background:var(--line);border:0;border-radius:12px;padding:10px
     <button class="btn" onclick="savePay()">Save</button>
     <button class="btn bad" id="pDel" onclick="delPay()">Delete this payment</button>
   </div>
+  <div class="sheet" id="tsheet">
+    <div class="grab"></div>
+    <div class="seg" id="tType"></div>
+    <div class="field"><label>Amount</label><input type="number" id="tAmt" inputmode="decimal" min="0" step="0.01" placeholder="0" style="width:130px"></div>
+    <div class="field"><label>Details</label><input type="text" id="tName" maxlength="40" placeholder="e.g. Tesco shop" style="width:170px;text-align:left"></div>
+    <div class="chips" id="tCats" style="margin-top:12px"></div>
+    <div class="field"><label>Date</label><input type="date" id="tDate"></div>
+    <div class="field"><label>Time</label><input type="time" id="tTime"></div>
+    <button class="btn" onclick="saveTx()">Save</button>
+    <button class="btn bad" id="tDel" onclick="delTx()">Delete</button>
+  </div>
   <div class="toast" id="toast"></div>
 </div>
 
@@ -290,7 +358,7 @@ input[type=date]{background:var(--line);border:0;border-radius:12px;padding:10px
 const KEY='worklog.v1';
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const COLORS=['#6c5ce7','#00b894','#e17055','#0984e3','#e84393','#fdcb6e'];
-const defState=()=>({cur:'£',jobs:[{id:'j1',name:'My job',rate:15,color:COLORS[0],plan:[5,5,5,5,5,0,0]}],view:'j1',entries:{},dismissed:{},paid:{},payments:[]});
+const defState=()=>({cur:'£',jobs:[{id:'j1',name:'My job',rate:15,color:COLORS[0],plan:[5,5,5,5,5,0,0]}],view:'j1',entries:{},dismissed:{},paid:{},payments:[],txns:[],wishlist:[],opening:0,wishMode:'order'});
 /* Accepts data from any earlier version (single job) and returns the multi-job shape. */
 function migrate(raw){
   raw=raw&&typeof raw==='object'?raw:{};
@@ -303,6 +371,7 @@ function migrate(raw){
   Object.keys(s.paid).forEach(k=>{if(!k.includes('|')){s.paid[k+'|'+first]=s.paid[k];delete s.paid[k]}});
   if(!Array.isArray(s.payments))s.payments=[];
   s.payments=s.payments.filter(p=>p&&p.amount>0&&p.date&&s.jobs.some(j=>j.id===p.jobId));
+  if(!Array.isArray(s.txns))s.txns=[];if(!Array.isArray(s.wishlist))s.wishlist=[];s.opening=+s.opening||0;if(s.wishMode!=='each')s.wishMode='order';
   if(!s.cur||s.cur==='$')s.cur='£';
   if(s.view!=='all'&&!s.jobs.some(j=>j.id===s.view))s.view=s.jobs.length>1?'all':first;
   return s;
@@ -372,7 +441,7 @@ function countUp(el,to,format){
 
 /* JOB SWITCHER */
 function renderBar(){
-  const b=$('jobbar');b.style.display=(tab==='set'||tab==='bal')?'none':'flex';
+  const b=$('jobbar');b.style.display=(tab==='set'||tab==='bal'||tab==='wal')?'none':'flex';
   let h='';
   if(S.jobs.length>1)h+=`<button class="jchip ${S.view==='all'?'on':''}" onclick="setView('all')">All jobs</button>`;
   h+=S.jobs.map(j=>`<button class="jchip ${S.view===j.id?'on':''}" onclick="setView('${j.id}')"><span class="dot" style="background:${j.color}"></span>${esc(j.name)}</button>`).join('');
@@ -445,7 +514,7 @@ function loadJob(){
   updSheet();
 }
 function switchJob(id){updSheet();curJob=id;vib(6);loadJob()}
-function closeSheet(){$('scrim').classList.remove('on');$('sheet').classList.remove('on');$('psheet').classList.remove('on')}
+function closeSheet(){$('scrim').classList.remove('on');$('sheet').classList.remove('on');$('psheet').classList.remove('on');$('tsheet').classList.remove('on')}
 function updSheet(){const dr=drafts[curJob];dr.h=curH;dr.rate=+$('sRate').value||0;$('sVal').textContent=curH;$('sEarn').textContent='= '+money(curH*dr.rate)}
 function bump(n){curH=Math.max(0,Math.min(24,curH+n));drafts[curJob].touched=true;vib(6);updSheet()}
 function setH(x){curH=x;drafts[curJob].touched=true;vib(6);updSheet()}
@@ -573,6 +642,133 @@ function savePay(){
 }
 function delPay(){S.payments=S.payments.filter(p=>p.id!==payEdit);save();closeSheet();renderAll();toast('Payment deleted')}
 
+/* WALLET: savings, money in/out ledger, wishlist */
+const OUT_CATS=[['Food','🍔'],['Transport','🚌'],['Rent','🏠'],['Bills','💡'],['Shopping','🛍️'],['Health','💊'],['Fun','🎬'],['Other','📦']];
+const IN_CATS=[['Gift','🎁'],['Refund','↩️'],['Other','📦']];
+const catIcon=(t,c)=>{const f=(t==='in'?IN_CATS:OUT_CATS).find(x=>x[0]===c);return c==='Salary'?'💼':(f?f[1]:'📦')};
+let walTab='sav',actFilter='all';
+/* money that came in from work: payments you logged + weeks ticked paid (so work income is never typed in twice) */
+function workIn(from,to){
+  const out=[];
+  S.payments.forEach(p=>{const j=jobById(p.jobId);if(j&&p.date>=from&&p.date<=to)out.push({src:'work',type:'in',amount:p.amount,date:p.date,time:'',cat:'Salary',title:j.name+' payment'+(p.note?' · '+p.note:'')})});
+  for(const pk in S.paid){const[w,jid]=pk.split('|'),d=S.paid[pk],j=jobById(jid);if(j&&d>=from&&d<=to){const a=weekTotals(new Date(w+'T00:00'),[j]).p;if(a>0)out.push({src:'work',type:'in',amount:a,date:d,time:'',cat:'Salary',title:j.name+' · week of '+fmt(new Date(w+'T00:00'),{day:'numeric',month:'short'})})}}
+  return out;
+}
+function flows(from,to){
+  const work=workIn(from,to).reduce((a,x)=>a+x.amount,0);let other=0,out=0;
+  S.txns.forEach(t=>{if(t.date>=from&&t.date<=to)t.type==='in'?other+=t.amount:out+=t.amount});
+  return{work,other,out,net:work+other-out};
+}
+const savingsAt=to=>S.opening+flows(EARLIEST,to).net;
+function paceInfo(){
+  let first=null;const up=d=>{if(d&&(!first||d<first))first=d};
+  S.txns.forEach(t=>up(t.date));S.payments.forEach(p=>up(p.date));Object.values(S.paid).forEach(up);
+  const today=key(new Date());
+  if(!first)return{rate:0,days:0};
+  const since=Math.round((new Date(today+'T00:00')-new Date(first+'T00:00'))/864e5)+1,days=Math.min(90,Math.max(14,since));
+  return{rate:flows(key(addDays(new Date(today+'T00:00'),-(days-1))),today).net/days,days};
+}
+function renderWal(){
+  $('walNav').style.display=walTab==='wish'?'none':'flex';
+  $('walTabs').innerHTML=[['sav','Savings'],['act','Activity'],['wish','Wishlist']].map(([k,n])=>`<button class="jchip ${walTab===k?'on':''}" onclick="setWalTab('${k}')">${n}</button>`).join('');
+  ['sav','act','wish'].forEach(k=>$('w-'+k).style.display=walTab===k?'block':'none');
+  const y=month.getFullYear(),m=month.getMonth(),from=key(new Date(y,m,1)),to=key(new Date(y,m+1,0)),today=key(new Date());
+  $('wlTitle').textContent=fmt(month,{month:'long',year:'numeric'});$('wlSub').textContent=walTab==='sav'?'Your savings after all spending':'Money in and out';
+  if(walTab==='sav'){
+    const f=flows(from,to),total=savingsAt(to<today?to:today<from?to:today),cur=today>=from&&today<=to;
+    $('svLabel').textContent=cur?'Total savings · today':'Total savings · end of '+fmt(month,{month:'long'});
+    countUp($('svTotal'),total,n=>(n<0?'−':'')+money(Math.abs(n)));
+    $('svIn').textContent=money(f.work+f.other);$('svOut').textContent=money(f.out);$('svNet').textContent=(f.net<0?'−':'')+money(Math.abs(f.net));
+    $('svRows').innerHTML=`<div class="brow"><span>Savings at start of ${fmt(month,{month:'long'})}</span><b>${money(savingsAt(key(new Date(y,m,0))))}</b></div>
+      <div class="brow"><span>Work income received</span><b class="gain">+${money(f.work)}</b></div>
+      <div class="brow"><span>Other money in</span><b class="gain">+${money(f.other)}</b></div>
+      <div class="brow"><span>Spent</span><b class="loss">−${money(f.out)}</b></div>
+      <div class="take"><span>Saved in ${fmt(month,{month:'long'})}</span><b class="${f.net>=0?'gain':'loss'}">${f.net<0?'−':''}${money(Math.abs(f.net))}</b></div>`;
+    const cats={};S.txns.forEach(t=>{if(t.type==='out'&&t.date>=from&&t.date<=to)cats[t.cat]=(cats[t.cat]||0)+t.amount});
+    const list=Object.entries(cats).sort((a,b)=>b[1]-a[1]),mx=list.length?list[0][1]:1;
+    $('svCats').innerHTML=list.length?list.map(([c,a])=>`<div class="cbar"><div class="l"><span>${catIcon('out',c)} ${esc(c)}</span><b>${money(a)} <small style="color:var(--mute)">${f.out?Math.round(a/f.out*100):0}%</small></b></div><div class="t"><i style="width:${a/mx*100}%"></i></div></div>`).join(''):'<div class="sub" style="margin-top:6px">No spending logged this month.</div>';
+    if(document.activeElement!==$('openBal'))$('openBal').value=S.opening||'';
+  }
+  if(walTab==='act'){
+    $('actFilter').innerHTML=[['all','All'],['in','Money in'],['out','Money out']].map(([k,n])=>`<button class="jchip ${actFilter===k?'on':''}" onclick="setActFilter('${k}')">${n}</button>`).join('');
+    let items=[...workIn(from,to),...S.txns.filter(t=>t.date>=from&&t.date<=to).map(t=>({...t,src:'tx'}))];
+    if(actFilter!=='all')items=items.filter(x=>x.type===actFilter);
+    items.sort((a,b)=>(b.date+(b.time||'')).localeCompare(a.date+(a.time||'')));
+    let html='',last='';
+    items.forEach(x=>{
+      if(x.date!==last){last=x.date;html+=`<div class="dhead">${fmt(new Date(x.date+'T00:00'),{weekday:'long',day:'numeric',month:'short'})}</div>`}
+      const inn=x.type==='in';
+      html+=`<button class="prow" style="background:var(--card);border-radius:16px;padding:12px;margin-top:8px;border:0;box-shadow:var(--shadow)" onclick="${x.src==='work'?"showTab('bal')":`openTx('${x.id}')`}"><span style="display:flex;gap:12px;align-items:center;min-width:0"><span class="ico">${catIcon(x.type,x.cat)}</span><span style="min-width:0"><b>${esc(x.title||x.cat)}</b><small>${esc(x.cat)}${x.time?' · '+x.time:''}${x.src==='work'?' · from work':''}</small></span></span><b class="${inn?'gain':'loss'}" style="white-space:nowrap">${inn?'+':'−'}${money(x.amount)}</b></button>`;
+    });
+    $('actList').innerHTML=html||'<div class="card sub">Nothing here yet. Tap “+ Add money in / out” to log your first one.</div>';
+  }
+  if(walTab==='wish')renderWish();
+}
+function setWalTab(t){walTab=t;vib(6);renderWal();document.querySelector('main').scrollTop=0}
+function setActFilter(f){actFilter=f;vib(6);renderWal()}
+$('openBal').oninput=e=>{S.opening=+e.target.value||0;save();renderWal()};
+
+/* money in / out sheet */
+let txEdit=null,txType='out',txCat='Food';
+function openTx(id){
+  const t=id?S.txns.find(x=>x.id===id):null;txEdit=t?t.id:null;
+  txType=t?t.type:'out';txCat=t?t.cat:(txType==='out'?'Food':'Gift');
+  $('tAmt').value=t?t.amount:'';$('tName').value=t?t.title||'':'';
+  const now=new Date(),inMonth=key(now).slice(0,7)===key(month).slice(0,7);
+  $('tDate').value=t?t.date:(inMonth?key(now):key(new Date(month.getFullYear(),month.getMonth()+1,0)));
+  $('tTime').value=t?t.time||'':pad(now.getHours())+':'+pad(now.getMinutes());
+  $('tDel').style.display=t?'block':'none';
+  renderTx();$('scrim').classList.add('on');$('tsheet').classList.add('on');
+  if(!t)setTimeout(()=>{try{$('tAmt').focus()}catch(e){}},350);
+}
+function renderTx(){
+  $('tType').innerHTML=`<button class="out ${txType==='out'?'on':''}" onclick="setTxType('out')">Money out</button><button class="in ${txType==='in'?'on':''}" onclick="setTxType('in')">Money in</button>`;
+  $('tCats').innerHTML=(txType==='out'?OUT_CATS:IN_CATS).map(([n,i])=>`<button class="chip" style="${n===txCat?'background:var(--pri);color:#fff':''}" onclick="setTxCat('${n}')">${i} ${n}</button>`).join('');
+}
+function setTxType(t){txType=t;txCat=t==='out'?'Food':'Gift';vib(6);renderTx()}
+function setTxCat(c){txCat=c;vib(6);renderTx()}
+function saveTx(){
+  const amt=Math.round((+$('tAmt').value)*100)/100;if(!(amt>0)){toast('Enter the amount');return}
+  const date=$('tDate').value||key(new Date()),rec={id:txEdit||'t'+Date.now().toString(36),type:txType,amount:amt,date,time:$('tTime').value||'',title:$('tName').value.trim(),cat:txCat};
+  if(txEdit)S.txns[S.txns.findIndex(x=>x.id===txEdit)]=rec;else S.txns.push(rec);
+  const d=new Date(date+'T00:00');month=new Date(d.getFullYear(),d.getMonth(),1);calStart=mondayOf(month);
+  walTab='act';save();closeSheet();renderAll();vib(25);toast(txType==='in'?'Money in saved ✓':'Expense saved ✓');
+}
+function delTx(){S.txns=S.txns.filter(x=>x.id!==txEdit);save();closeSheet();renderAll();toast('Deleted')}
+
+/* wishlist: how long until your savings (at your recent saving pace) cover each item */
+function renderWish(){
+  const sv=savingsAt(key(new Date())),pc=paceInfo(),perMonth=pc.rate*30.4;
+  $('wsNow').textContent=(sv<0?'−':'')+money(Math.abs(sv));$('wsPace').textContent=(perMonth<0?'−':'')+money(Math.abs(perMonth));$('wsDays').textContent=pc.days;
+  $('wsNote').textContent=pc.days?`Your pace is what you saved (money in minus money out) over the last ${pc.days} days, averaged.`:'Add some money in and out first. Your pace is worked out from them.';
+  $('wishMode').innerHTML=[['order','One by one, in list order'],['each','Each on its own']].map(([k,n])=>`<button class="jchip ${S.wishMode===k?'on':''}" onclick="setWishMode('${k}')">${n}</button>`).join('');
+  let cum=0;
+  $('wishList').innerHTML=S.wishlist.length?S.wishlist.map((w,i)=>{
+    const target=S.wishMode==='order'?(cum+=w.price):w.price,need=target-sv,pct=Math.max(0,Math.min(100,sv/target*100));
+    let st,cls='';
+    if(need<=0){st='✓ You can buy this now';cls='gain'}
+    else if(!(pc.rate>0)){st=`Needs ${money(need)} more. At your current pace you are not saving yet.`;cls='loss'}
+    else{const d=Math.ceil(need/pc.rate),mo=d/30.4;st=`${money(need)} to go · about ${d<=45?d+' day'+(d>1?'s':''):mo.toFixed(1)+' months'}`;cls='pos';
+      st+=`<small style="display:block;color:var(--mute);font-weight:600">around ${fmt(addDays(new Date(),d),{day:'numeric',month:'short',year:'numeric'})}${d>45?' ('+d+' days)':''}</small>`}
+    return `<div class="card wish"><div style="display:flex;justify-content:space-between;gap:10px"><b style="font-size:17px">${esc(w.name)}</b><b>${money(w.price)}</b></div>
+      <div class="st ${cls}">${st}</div><div class="cbar" style="margin:8px 0 0"><div class="t"><i style="width:${pct}%"></i></div></div>
+      <div class="acts">${i>0?`<button onclick="moveWish(${i})" aria-label="Move up">↑</button>`:''}<button class="buy" onclick="buyWish(${i})">Bought it</button><button onclick="rmWish(${i})">Remove</button></div></div>`;
+  }).join(''):'<div class="card sub" style="margin-top:12px">Your wishlist is empty. Add something you want above and see how long it will take.</div>';
+}
+function setWishMode(k){S.wishMode=k;save();vib(6);renderWish()}
+function addWish(){
+  const name=$('wName').value.trim(),price=Math.round((+$('wPrice').value)*100)/100;
+  if(!name||!(price>0)){toast('Enter the item and its price');return}
+  S.wishlist.push({id:'w'+Date.now().toString(36),name,price});$('wName').value='';$('wPrice').value='';save();vib(15);renderWish();toast('Added to wishlist');
+}
+function moveWish(i){const a=S.wishlist;[a[i-1],a[i]]=[a[i],a[i-1]];save();renderWish()}
+function rmWish(i){S.wishlist.splice(i,1);save();renderWish();toast('Removed')}
+function buyWish(i){
+  const w=S.wishlist[i],now=new Date();
+  S.txns.push({id:'t'+Date.now().toString(36),type:'out',amount:w.price,date:key(now),time:pad(now.getHours())+':'+pad(now.getMinutes()),title:w.name,cat:'Shopping'});
+  S.wishlist.splice(i,1);save();vib(25);renderAll();toast('Bought · added to your expenses ✓');
+}
+
 /* SETTINGS (edits one job at a time) */
 function renderSet(){
   if(!jobById(editJob))editJob=S.jobs[0].id;
@@ -648,7 +844,7 @@ document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.id==='v-'+tab));
   document.querySelector('main').scrollTop=0;vib(8);renderAll();
 });
-function renderAll(){renderBar();renderWeek();renderMonth();renderCal();renderHist();renderBal();renderSet()}
+function renderAll(){renderBar();renderWeek();renderMonth();renderCal();renderHist();renderBal();renderWal();renderSet()}
 renderAll();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
