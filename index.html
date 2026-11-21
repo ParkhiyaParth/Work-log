@@ -255,6 +255,7 @@ input[type=time]{background:var(--line);border:0;border-radius:12px;padding:10px
           <div class="row"><div><b id="svIn">0</b>money in</div><div><b id="svOut">0</b>spent</div><div><b id="svNet">0</b>saved this month</div></div>
         </div>
         <div class="card" id="svRows"></div>
+        <div class="card" id="svOwed"></div>
         <div class="card"><b>Where it went</b><div id="svCats"></div></div>
         <div class="card"><div class="field" style="margin:0"><label>Savings I already had</label><input type="number" id="openBal" inputmode="decimal" step="0.01" placeholder="0"></div><div class="sub" style="margin-top:6px">Money you had before you started tracking here. It is added to your total.</div></div>
       </div>
@@ -345,6 +346,8 @@ input[type=time]{background:var(--line);border:0;border-radius:12px;padding:10px
     <div class="seg" id="tType"></div>
     <div class="field"><label>Amount</label><input type="number" id="tAmt" inputmode="decimal" min="0" step="0.01" placeholder="0" style="width:130px"></div>
     <div class="field"><label>Details</label><input type="text" id="tName" maxlength="40" placeholder="e.g. Tesco shop" style="width:170px;text-align:left"></div>
+    <div class="sub" id="tJobsLbl" style="text-align:center;margin-top:12px">Who paid you?</div>
+    <div class="chips" id="tJobs" style="margin-top:6px"></div>
     <div class="chips" id="tCats" style="margin-top:12px"></div>
     <div class="field"><label>Date</label><input type="date" id="tDate"></div>
     <div class="field"><label>Time</label><input type="time" id="tTime"></div>
@@ -597,12 +600,16 @@ function receivedIn(jid,from,to){
   S.payments.forEach(x=>{if(x.jobId===jid&&x.date>=from&&x.date<=to)man+=x.amount});
   return{wk,man,total:wk+man};
 }
+function owedFor(j,from,to,prev){
+  const e=earnedIn(j.id,from,to),r=receivedIn(j.id,from,to),carry=earnedIn(j.id,EARLIEST,prev)-receivedIn(j.id,EARLIEST,prev).total;
+  return{e,r,carry,owed:carry+e-r.total};
+}
 function renderBal(){
   const y=month.getFullYear(),m=month.getMonth(),from=key(new Date(y,m,1)),to=key(new Date(y,m+1,0)),prev=key(new Date(y,m,0));
   $('bTitle').textContent=fmt(month,{month:'long',year:'numeric'});$('bMonth').textContent=fmt(month,{month:'long'});
   let tOwed=0,tEarn=0,tRec=0,tHand=0,html='';
   S.jobs.forEach(j=>{
-    const e=earnedIn(j.id,from,to),r=receivedIn(j.id,from,to),carry=earnedIn(j.id,EARLIEST,prev)-receivedIn(j.id,EARLIEST,prev).total,owed=carry+e-r.total;
+    const {e,r,carry,owed}=owedFor(j,from,to,prev);
     tOwed+=owed;tEarn+=e;tRec+=r.total;tHand+=receivedIn(j.id,EARLIEST,to).total;
     const parts=[r.wk?`${money(r.wk)} from weeks ticked paid`:'',r.man?`${money(r.man)} logged`:''].filter(Boolean).join(' + ');
     html+=`<div class="card"><div style="display:flex;align-items:center;gap:8px"><span class="dot" style="background:${j.color}"></span><b style="font-size:18px">${esc(j.name)}</b></div>
@@ -635,7 +642,7 @@ function renderPJobs(){$('pJobs').innerHTML=S.jobs.length>1?S.jobs.map(x=>`<butt
 function pickPJob(id){payJob=id;vib(6);renderPJobs()}
 function savePay(){
   const amt=Math.round((+$('pAmt').value)*100)/100;if(!(amt>0)){toast('Enter the amount you received');return}
-  const date=$('pDate').value||key(new Date()),rec={id:payEdit||'p'+Date.now().toString(36),jobId:payJob,date,amount:amt,note:$('pNote').value.trim()};
+  const date=$('pDate').value||key(new Date()),old=payEdit?S.payments.find(p=>p.id===payEdit):null,rec={id:payEdit||'p'+Date.now().toString(36),jobId:payJob,date,amount:amt,note:$('pNote').value.trim(),time:old?old.time||'':''};
   if(payEdit)S.payments[S.payments.findIndex(p=>p.id===payEdit)]=rec;else S.payments.push(rec);
   const d=new Date(date+'T00:00');month=new Date(d.getFullYear(),d.getMonth(),1);calStart=mondayOf(month);
   save();closeSheet();renderAll();vib(25);toast('Payment saved ✓');
@@ -650,7 +657,7 @@ let walTab='sav',actFilter='all';
 /* money that came in from work: payments you logged + weeks ticked paid (so work income is never typed in twice) */
 function workIn(from,to){
   const out=[];
-  S.payments.forEach(p=>{const j=jobById(p.jobId);if(j&&p.date>=from&&p.date<=to)out.push({src:'work',type:'in',amount:p.amount,date:p.date,time:'',cat:'Salary',title:j.name+' payment'+(p.note?' · '+p.note:'')})});
+  S.payments.forEach(p=>{const j=jobById(p.jobId);if(j&&p.date>=from&&p.date<=to)out.push({src:'work',payId:p.id,type:'in',amount:p.amount,date:p.date,time:p.time||'',cat:'Salary',title:j.name+(p.note?' · '+p.note:' payment')})});
   for(const pk in S.paid){const[w,jid]=pk.split('|'),d=S.paid[pk],j=jobById(jid);if(j&&d>=from&&d<=to){const a=weekTotals(new Date(w+'T00:00'),[j]).p;if(a>0)out.push({src:'work',type:'in',amount:a,date:d,time:'',cat:'Salary',title:j.name+' · week of '+fmt(new Date(w+'T00:00'),{day:'numeric',month:'short'})})}}
   return out;
 }
@@ -684,6 +691,11 @@ function renderWal(){
       <div class="brow"><span>Other money in</span><b class="gain">+${money(f.other)}</b></div>
       <div class="brow"><span>Spent</span><b class="loss">−${money(f.out)}</b></div>
       <div class="take"><span>Saved in ${fmt(month,{month:'long'})}</span><b class="${f.net>=0?'gain':'loss'}">${f.net<0?'−':''}${money(Math.abs(f.net))}</b></div>`;
+    const prevK=key(new Date(y,m,0));let owedSum=0;
+    const rows=S.jobs.map(j=>{const o=owedFor(j,from,to,prevK);owedSum+=o.owed;return Math.abs(o.owed)<.005&&!o.e?'':`<div class="brow"><span><span class="dot" style="background:${j.color}"></span> ${esc(j.name)}</span><b class="${o.owed>=0?'pos':'gain'}">${o.owed<0?'−':''}${money(Math.abs(o.owed))}</b></div>`}).join('');
+    $('svOwed').innerHTML=`<b>Still to take from your jobs</b><div class="sub">Earned minus what each job has paid you, up to the end of ${fmt(month,{month:'long'})}.</div>${rows||'<div class="sub" style="margin-top:6px">Nothing owed.</div>'}
+      <div class="take"><span>Total to take</span><b class="${owedSum>=0?'pos':'gain'}">${owedSum<0?'−':''}${money(Math.abs(owedSum))}</b></div>
+      <div class="brow" style="margin-top:6px"><span>Savings once they have paid you<small>Your savings plus the total above</small></span><b>${total+owedSum<0?'−':''}${money(Math.abs(total+owedSum))}</b></div>`;
     const cats={};S.txns.forEach(t=>{if(t.type==='out'&&t.date>=from&&t.date<=to)cats[t.cat]=(cats[t.cat]||0)+t.amount});
     const list=Object.entries(cats).sort((a,b)=>b[1]-a[1]),mx=list.length?list[0][1]:1;
     $('svCats').innerHTML=list.length?list.map(([c,a])=>`<div class="cbar"><div class="l"><span>${catIcon('out',c)} ${esc(c)}</span><b>${money(a)} <small style="color:var(--mute)">${f.out?Math.round(a/f.out*100):0}%</small></b></div><div class="t"><i style="width:${a/mx*100}%"></i></div></div>`).join(''):'<div class="sub" style="margin-top:6px">No spending logged this month.</div>';
@@ -698,7 +710,7 @@ function renderWal(){
     items.forEach(x=>{
       if(x.date!==last){last=x.date;html+=`<div class="dhead">${fmt(new Date(x.date+'T00:00'),{weekday:'long',day:'numeric',month:'short'})}</div>`}
       const inn=x.type==='in';
-      html+=`<button class="prow" style="background:var(--card);border-radius:16px;padding:12px;margin-top:8px;border:0;box-shadow:var(--shadow)" onclick="${x.src==='work'?"showTab('bal')":`openTx('${x.id}')`}"><span style="display:flex;gap:12px;align-items:center;min-width:0"><span class="ico">${catIcon(x.type,x.cat)}</span><span style="min-width:0"><b>${esc(x.title||x.cat)}</b><small>${esc(x.cat)}${x.time?' · '+x.time:''}${x.src==='work'?' · from work':''}</small></span></span><b class="${inn?'gain':'loss'}" style="white-space:nowrap">${inn?'+':'−'}${money(x.amount)}</b></button>`;
+      html+=`<button class="prow" style="background:var(--card);border-radius:16px;padding:12px;margin-top:8px;border:0;box-shadow:var(--shadow)" onclick="${x.payId?`openPay('${x.payId}')`:x.src==='work'?"showTab('bal')":`openTx('${x.id}')`}"><span style="display:flex;gap:12px;align-items:center;min-width:0"><span class="ico">${catIcon(x.type,x.cat)}</span><span style="min-width:0"><b>${esc(x.title||x.cat)}</b><small>${esc(x.cat)}${x.time?' · '+x.time:''}${x.src==='work'?' · from work':''}</small></span></span><b class="${inn?'gain':'loss'}" style="white-space:nowrap">${inn?'+':'−'}${money(x.amount)}</b></button>`;
     });
     $('actList').innerHTML=html||'<div class="card sub">Nothing here yet. Tap “+ Add money in / out” to log your first one.</div>';
   }
@@ -709,10 +721,10 @@ function setActFilter(f){actFilter=f;vib(6);renderWal()}
 $('openBal').oninput=e=>{S.opening=+e.target.value||0;save();renderWal()};
 
 /* money in / out sheet */
-let txEdit=null,txType='out',txCat='Food';
+let txEdit=null,txType='out',txCat='Food',txJob=null;
 function openTx(id){
   const t=id?S.txns.find(x=>x.id===id):null;txEdit=t?t.id:null;
-  txType=t?t.type:'out';txCat=t?t.cat:(txType==='out'?'Food':'Gift');
+  txType=t?t.type:'out';txCat=t?t.cat:(txType==='out'?'Food':'Gift');txJob=null;
   $('tAmt').value=t?t.amount:'';$('tName').value=t?t.title||'':'';
   const now=new Date(),inMonth=key(now).slice(0,7)===key(month).slice(0,7);
   $('tDate').value=t?t.date:(inMonth?key(now):key(new Date(month.getFullYear(),month.getMonth()+1,0)));
@@ -723,16 +735,27 @@ function openTx(id){
 }
 function renderTx(){
   $('tType').innerHTML=`<button class="out ${txType==='out'?'on':''}" onclick="setTxType('out')">Money out</button><button class="in ${txType==='in'?'on':''}" onclick="setTxType('in')">Money in</button>`;
+  const fromJob=txType==='in'&&txJob;
+  $('tJobsLbl').style.display=$('tJobs').style.display=txType==='in'?'flex':'none';$('tJobsLbl').style.display=txType==='in'?'block':'none';
+  $('tJobs').innerHTML=txType==='in'?S.jobs.map(j=>`<button class="jchip ${txJob===j.id?'on':''}" onclick="pickTxJob('${j.id}')"><span class="dot" style="background:${j.color}"></span>${esc(j.name)}</button>`).join('')+`<button class="jchip ${!txJob?'on':''}" onclick="pickTxJob('')">Someone else</button>`:'';
+  $('tCats').style.display=fromJob?'none':'flex';
   $('tCats').innerHTML=(txType==='out'?OUT_CATS:IN_CATS).map(([n,i])=>`<button class="chip" style="${n===txCat?'background:var(--pri);color:#fff':''}" onclick="setTxCat('${n}')">${i} ${n}</button>`).join('');
 }
-function setTxType(t){txType=t;txCat=t==='out'?'Food':'Gift';vib(6);renderTx()}
+function setTxType(t){txType=t;txCat=t==='out'?'Food':'Gift';txJob=t==='in'&&!txEdit?S.jobs[0].id:null;vib(6);renderTx()}
+function pickTxJob(id){txJob=id||null;if(!id&&!IN_CATS.some(c=>c[0]===txCat))txCat='Gift';vib(6);renderTx()}
 function setTxCat(c){txCat=c;vib(6);renderTx()}
 function saveTx(){
   const amt=Math.round((+$('tAmt').value)*100)/100;if(!(amt>0)){toast('Enter the amount');return}
-  const date=$('tDate').value||key(new Date()),rec={id:txEdit||'t'+Date.now().toString(36),type:txType,amount:amt,date,time:$('tTime').value||'',title:$('tName').value.trim(),cat:txCat};
-  if(txEdit)S.txns[S.txns.findIndex(x=>x.id===txEdit)]=rec;else S.txns.push(rec);
+  const date=$('tDate').value||key(new Date()),time=$('tTime').value||'',title=$('tName').value.trim();
+  if(txType==='in'&&txJob){   // paid by one of your jobs: counts as a payment from that job
+    if(txEdit)S.txns=S.txns.filter(x=>x.id!==txEdit);
+    S.payments.push({id:'p'+Date.now().toString(36),jobId:txJob,date,amount:amt,note:title,time});
+  }else{
+    const rec={id:txEdit||'t'+Date.now().toString(36),type:txType,amount:amt,date,time,title,cat:txCat};
+    if(txEdit)S.txns[S.txns.findIndex(x=>x.id===txEdit)]=rec;else S.txns.push(rec);
+  }
   const d=new Date(date+'T00:00');month=new Date(d.getFullYear(),d.getMonth(),1);calStart=mondayOf(month);
-  walTab='act';save();closeSheet();renderAll();vib(25);toast(txType==='in'?'Money in saved ✓':'Expense saved ✓');
+  walTab='act';save();closeSheet();renderAll();vib(25);toast(txType==='in'?(txJob?'Payment from '+jobById(txJob).name+' saved ✓':'Money in saved ✓'):'Expense saved ✓');
 }
 function delTx(){S.txns=S.txns.filter(x=>x.id!==txEdit);save();closeSheet();renderAll();toast('Deleted')}
 
